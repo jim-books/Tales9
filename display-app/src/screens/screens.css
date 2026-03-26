@@ -1,0 +1,591 @@
+/* ─── Shared panel screen styles ─────────────────────────────────────────────── */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  color: var(--color-text);
+}
+
+.screen-header {
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.screen-header__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.screen-back {
+  background: none;
+  border: none;
+  color: var(--user-color);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px 4px 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.screen-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────────── */
+
+.btn-primary {
+  display: block;
+  width: 100%;
+  background: var(--user-color);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.btn-secondary {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--user-color);
+  border: 2px solid var(--user-color);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 8px 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ─── Category pill ──────────────────────────────────────────────────────────── */
+
+.category-pill {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+
+/* ─── Home screen ────────────────────────────────────────────────────────────── */
+
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 16px 16px;
+  gap: 12px;
+}
+
+.home-logo {
+  text-align: center;
+}
+
+.home-logo__name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--user-color);
+}
+
+.home-logo__tagline {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.home-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex: 1;
+}
+
+.home-card:active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--user-color);
+}
+
+.home-card__icon {
+  width: 32px;
+  height: 32px;
+  color: var(--user-color);
+  flex-shrink: 0;
+}
+
+.home-card__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.home-card__sub {
+  font-size: 10px;
+  color: var(--color-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ─── About screen ───────────────────────────────────────────────────────────── */
+
+.about-section {
+  margin-bottom: 20px;
+}
+
+.about-section h3 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--user-color);
+  margin-bottom: 8px;
+}
+
+.about-section p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+/* ─── Menu screen ────────────────────────────────────────────────────────────── */
+
+.menu-search {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.menu-search input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.menu-search input::placeholder {
+  color: var(--color-muted);
+}
+
+.menu-categories {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.menu-cat-btn {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.menu-cat-btn--active {
+  background: var(--user-color);
+  color: #000;
+  border-color: var(--user-color);
+}
+
+.drink-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.drink-card__image {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+}
+
+.drink-card__image-placeholder {
+  width: 100%;
+  height: 80px;
+}
+
+.drink-card__body {
+  padding: 10px 12px 12px;
+}
+
+.drink-card__name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.drink-card__flavor {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+.drink-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drink-card__price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--user-color);
+}
+
+.drink-card__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.drink-card__actions button {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-details {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-order-sm {
+  background: var(--user-color);
+  color: #000;
+  border: none;
+}
+
+.menu-empty {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 12px;
+  padding: 32px 0;
+}
+
+/* ─── Drink detail ───────────────────────────────────────────────────────────── */
+
+.detail-hero {
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.detail-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.detail-flavor {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--user-color);
+  margin-bottom: 6px;
+}
+
+.detail-ingredients {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.detail-ingredients li {
+  font-size: 11px;
+  color: var(--color-muted);
+  padding: 3px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--user-color);
+  margin-bottom: 8px;
+}
+
+.detail-description {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-muted);
+  margin-bottom: 16px;
+}
+
+/* ─── Quiz flow ──────────────────────────────────────────────────────────────── */
+
+.quiz-progress {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.quiz-progress__fill {
+  height: 100%;
+  background: var(--user-color);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.quiz-step-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+.quiz-question {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-option {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.quiz-option:active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--user-color);
+}
+
+.quiz-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.quiz-result__heading {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+
+.quiz-result__icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.quiz-result__drink {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--user-color);
+  margin-bottom: 8px;
+}
+
+.quiz-result__desc {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-muted);
+  margin-bottom: 20px;
+}
+
+/* ─── Order status ───────────────────────────────────────────────────────────── */
+
+.order-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.order-card__name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.order-card__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.order-status-dot--preparing { background: #fb923c; }
+.order-status-dot--on-way    { background: #4a9eff; }
+.order-status-dot--arrived   { background: #4ade80; }
+
+.order-status-text {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.orders-empty {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.orders-empty p {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: 16px;
+}
+
+/* ─── Menu header ────────────────────────────────────────────────────────────── */
+
+.menu-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.menu-header__title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.menu-header__subtitle {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--color-muted);
+  margin-top: 2px;
+}

@@ -1,4 +1,4 @@
-import type { Point, Coaster, CoasterTouchSignature } from '../types'
+import type { Point, CoasterTouchSignature } from '../types'
 import { CalibrationMapper } from './CalibrationMapper'
 
 /**
