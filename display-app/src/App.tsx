@@ -3,7 +3,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { PixiStage } from './pixi/PixiStage'
 import { UserNode } from './components/UserNode'
 import { useAppStore } from './store/useAppStore'
-import { CANVAS_SIZE } from './engine/CalibrationMapper'
+import { CANVAS_SIZE, CalibrationMapper } from './engine/CalibrationMapper'
+import { TrackingEngine } from './engine/TrackingEngine'
+import { AnimationDispatcher } from './engine/AnimationDispatcher'
+import { InputAdapter } from './engine/InputAdapter'
 import type { WsMessage } from './types'
 import './App.css'
 
@@ -15,8 +18,58 @@ function MainView(): JSX.Element {
   const endSession = useAppStore((s) => s.endSession)
   const updateOrderStatus = useAppStore((s) => s.updateOrderStatus)
   const assignDrinkToCoaster = useAppStore((s) => s.assignDrinkToCoaster)
+  const upsertCoaster = useAppStore((s) => s.upsertCoaster)
+  const removeCoaster = useAppStore((s) => s.removeCoaster)
 
+  const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const dispatcherRef = useRef<AnimationDispatcher | null>(null)
+  const activeCoasterIdsRef = useRef<Set<string>>(new Set())
+
+  // Wire InputAdapter → TrackingEngine → store + AnimationDispatcher
+  useEffect(() => {
+    const mapper = new CalibrationMapper()
+    const tracker = new TrackingEngine(mapper)
+    const dispatcher = new AnimationDispatcher()
+    dispatcherRef.current = dispatcher
+
+    const adapter = new InputAdapter('touch', (points) => {
+      const tracked = tracker.processFrame(points)
+      const activeIds = new Set(tracked.filter((c) => c.active).map((c) => c.id))
+
+      for (const coaster of tracked) {
+        if (coaster.active) {
+          upsertCoaster({
+            id: coaster.id,
+            signature: coaster.signature,
+            centroid: coaster.centroid,
+            detected: true,
+          })
+          if (!activeCoasterIdsRef.current.has(coaster.id)) {
+            dispatcher.onCoasterDetected(coaster.id, coaster.centroid)
+          }
+        }
+      }
+
+      for (const id of activeCoasterIdsRef.current) {
+        if (!activeIds.has(id)) {
+          removeCoaster(id)
+          dispatcher.onCoasterRemoved(id)
+        }
+      }
+
+      activeCoasterIdsRef.current = activeIds
+    })
+
+    if (containerRef.current) {
+      adapter.attach(containerRef.current)
+    }
+
+    return () => {
+      adapter.detach()
+      dispatcherRef.current = null
+    }
+  }, [upsertCoaster, removeCoaster])
 
   useEffect(() => {
     const url =
@@ -42,6 +95,7 @@ function MainView(): JSX.Element {
           updateOrderStatus(msg.payload.orderId, msg.payload.status)
         } else if (msg.type === 'COASTER_ASSIGN') {
           assignDrinkToCoaster(msg.payload.coasterId, msg.payload.drinkId)
+          dispatcherRef.current?.assignDrink(msg.payload.coasterId, msg.payload.drinkId)
         }
       } catch {
         // Ignore malformed messages
@@ -60,6 +114,7 @@ function MainView(): JSX.Element {
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'fixed',
         top: 0,

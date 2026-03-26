@@ -93,6 +93,33 @@ Total: 37/37
 
 ---
 
+## Session: 2026-03-27 (continued)
+
+### Integration: TrackingEngine + InputAdapter wired into App.tsx
+
+- [x] `src/App.tsx` — added `containerRef` on main container div; new `useEffect` creates `CalibrationMapper`, `TrackingEngine`, `AnimationDispatcher`, and `InputAdapter('touch', ...)` on mount
+- [x] Touch frame callback: `tracker.processFrame(points)` → diffs active coaster IDs → calls `upsertCoaster` / `removeCoaster` on store + `dispatcher.onCoasterDetected` / `onCoasterRemoved` for animation events
+- [x] `COASTER_ASSIGN` WS handler now also calls `dispatcherRef.current?.assignDrink()` so AnimationDispatcher stays in sync
+- [x] 37/37 tests passing, `npm run build` clean (773 modules, 478kB bundle)
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        6 tests
+✓ useAppStore.test.ts           9 tests
+✓ AnimationDispatcher.test.ts   9 tests
+Total: 37/37
+```
+
+### Next: Games Layer + Diagnostics
+- [ ] Truth or Dare game flow (CommonSpace spinning arrow → spotlight → TRUTH/DARE broadcast)
+- [ ] King's Game flow (crown selection → decree → roulette spotlight)
+- [ ] Diagnostics overlay (touch points, coaster IDs, calibration values, animation states)
+- [ ] Proximity detection for shared drink battle animations
+
+---
+
 <!-- New entries go here, newest first. Format:
 
 ## Session: YYYY-MM-DD
