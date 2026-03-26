@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tales9 — Communication Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0f1a;
+      --card: #111827;
+      --card-border: rgba(148, 163, 184, 0.15);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent-http: #38bdf8;
+      --accent-ws: #22c55e;
+      --accent-ios: #f87171;
+      --accent-table: #a78bfa;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 32px 24px 48px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 32px;
+    }
+
+    section {
+      margin-bottom: 36px;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .flow-node {
+      flex: 1;
+      min-width: 160px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .flow-node.vps {
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+    }
+
+    .flow-node.table {
+      border-color: rgba(167, 139, 250, 0.4);
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
+    }
+
+    .flow-node.ios {
+      border-color: rgba(248, 113, 113, 0.4);
+      box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.2);
+    }
+
+    .flow-node .icon {
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+    }
+
+    .flow-node .name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .flow-node .role {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .flow-arrows {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+
+    .arrow-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .arrow-box.http {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-http);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .arrow-box.ws {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent-ws);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+
+    .data-list {
+      list-style: none;
+    }
+
+    .data-list li {
+      font-size: 0.85rem;
+      padding: 4px 0;
+      padding-left: 20px;
+      position: relative;
+      color: var(--muted);
+    }
+
+    .data-list li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--accent-http);
+      font-weight: 600;
+    }
+
+    .data-list li.out::before {
+      content: "←";
+      color: var(--accent-ws);
+    }
+
+    .why-vps ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .why-vps li {
+      font-size: 0.9rem;
+      padding: 8px 0 8px 28px;
+      position: relative;
+      color: var(--muted);
+    }
+
+    .why-vps li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--accent-ws);
+      font-weight: 700;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comparison .card {
+      margin-bottom: 0;
+    }
+
+    .comparison h3 {
+      font-size: 0.9rem;
+    }
+
+    .comparison ul {
+      list-style: none;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .comparison li {
+      padding: 4px 0;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .comparison li.pro::before {
+      content: "👍";
+      position: absolute;
+      left: 0;
+    }
+
+    .comparison li.con::before {
+      content: "👎";
+      position: absolute;
+      left: 0;
+    }
+
+    .decision {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(56, 189, 248, 0.08));
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-top: 16px;
+    }
+
+    .decision strong {
+      color: var(--accent-ws);
+      font-size: 0.9rem;
+    }
+
+    .decision p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .diagram-arch {
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      text-align: center;
+    }
+
+    .diagram-arch .row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .diagram-arch .box {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .diagram-arch .box.vps {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: var(--accent-http);
+    }
+
+    .diagram-arch .box.table {
+      background: rgba(167, 139, 250, 0.2);
+      border: 1px solid rgba(167, 139, 250, 0.5);
+      color: var(--accent-table);
+    }
+
+    .diagram-arch .box.ios {
+      background: rgba(248, 113, 113, 0.2);
+      border: 1px solid rgba(248, 113, 113, 0.5);
+      color: var(--accent-ios);
+    }
+
+    .diagram-arch .label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .diagram-arch .pipe {
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🍸 Tales9 — Communication Architecture</h1>
+    <p class="subtitle">VPS Backend · Table (React) · iOS App — data flow & tech choices</p>
+
+    <!-- 1. DATA FLOW -->
+    <section>
+      <h2>📡 1. Data flow — what goes in & out</h2>
+
+      <div class="flow-row">
+        <div class="flow-node vps">
+          <div class="icon">🖥️</div>
+          <div class="name">VPS Backend</div>
+          <div class="role">Central server (storage + real-time hub)</div>
+        </div>
+        <div class="flow-node table">
+          <div class="icon">🪵</div>
+          <div class="name">Table</div>
+          <div class="role">React HTML app (Chromium)</div>
+        </div>
+        <div class="flow-node ios">
+          <div class="icon">📱</div>
+          <div class="name">iOS App</div>
+          <div class="role">Staff config & monitoring (Swift)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🖥️ VPS Backend</h3>
+        <ul class="data-list">
+          <li><strong>Receives:</strong> config updates (drinks, theme, coaster↔animation mapping), animation uploads, orders, interaction logs</li>
+          <li class="out"><strong>Outputs:</strong> config & animation list to Table & iOS; real-time config push to Table; new order notifications to iOS</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>🪵 Table (React app)</h3>
+        <ul class="data-list">
+          <li><strong>Receives:</strong> config & animation metadata (on load); real-time config/theme updates via WebSocket</li>
+          <li class="out"><strong>Outputs:</strong> orders (when user places drink), interaction logs (what’s on the table, profiles)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>📱 iOS App</h3>
+        <ul class="data-list">
+          <li><strong>Receives:</strong> current config from VPS; new order alerts (real-time); animation list</li>
+          <li class="out"><strong>Outputs:</strong> config changes (drinks, mapping), new animation uploads (files), theme/vibe changes</li>
+        </ul>
+      </div>
+
+      <div class="flow-arrows">
+        <span class="arrow-box http">HTTP (REST)</span>
+        <span class="arrow-box ws">WebSocket</span>
+        <span style="font-size:0.8rem; color: var(--muted);">— used for different flows below</span>
+      </div>
+    </section>
+
+    <!-- 2. WHY VPS -->
+    <section>
+      <h2>🏠 2. Why we use a VPS (not the devices)</h2>
+      <div class="card why-vps">
+        <ul>
+          <li><strong>User config & animations</strong> — We need one place to store drink menus, theme/vibe, and coaster↔animation mappings. Staff change these from iOS; the table loads them from the server.</li>
+          <li><strong>Order records per venue</strong> — Orders and interaction logs are stored by restaurant/table so we can report and (later) let other devices fetch them. This belongs on the server, not on a single device.</li>
+          <li><strong>Space & management</strong> — Config and animations can be large. We don’t want to manage that only on the table or the phone; the VPS acts as the single source of truth and handles storage.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. TECH COMPARISON & DECISION -->
+    <section>
+      <h2>⚙️ 3. HTTP (REST) vs WebSocket — why we use both</h2>
+
+      <div class="comparison">
+        <div class="card">
+          <h3>🔵 HTTP / REST</h3>
+          <ul>
+            <li class="pro">Simple request → response; easy to debug (browser, Postman).</li>
+            <li class="pro">Good for saving & loading data (config, orders, logs, file uploads).</li>
+            <li class="con">No instant push — client must poll or send again to get updates.</li>
+            <li class="con">Not ideal for “change theme and see it on the table in &lt;1s”.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>🟢 WebSocket</h3>
+          <ul>
+            <li class="pro">Persistent connection; server can push updates immediately.</li>
+            <li class="pro">Perfect for real-time config/theme sync (iOS → table).</li>
+            <li class="con">Not ideal for large file uploads or “must persist to DB” flows (orders).</li>
+            <li class="con">Needs connection handling (reconnect, auth) on server and clients.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="decision">
+        <strong>✅ Our choice: hybrid</strong>
+        <p>We use <strong>REST</strong> for: loading/saving config, uploading animations, sending orders and logs. We use <strong>WebSocket</strong> for: pushing config/theme changes from iOS to the table in real time, and (optional) pushing new orders to the iOS app. So each flow uses the right tool.</p>
+      </div>
+
+      <div class="diagram-arch">
+        <div class="label">Simplified flow</div>
+        <div class="row">
+          <span class="box ios">📱 iOS</span>
+          <span class="pipe">⇄</span>
+          <span class="box vps">🖥️ VPS</span>
+          <span class="pipe">⇄</span>
+          <span class="box table">🪵 Table</span>
+        </div>
+        <div class="row">
+          <span class="label">REST: config save, animation upload, orders, logs</span>
+        </div>
+        <div class="row">
+          <span class="label">WebSocket: real-time config/theme to table; new orders to iOS</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

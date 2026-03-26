@@ -1,0 +1,11 @@
+{
+  "name": "tales9-demo",
+  "version": "0.0.1",
+  "description": "Demo WebSocket server for iOS ↔ HTML config sync",
+  "scripts": {
+    "demo-server": "node demo-ws-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
