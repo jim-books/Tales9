@@ -86,6 +86,72 @@ function MainView(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // ── Demo keyboard shortcuts (bypass WebSocket for presenting without backend) ─
+  // S         → start session with 4 users      (replaces SESSION_START)
+  // E         → end session                      (replaces SESSION_END)
+  // 1 / 2 / 3 / 4 → toggle demo coaster + drink (replaces COASTER_ASSIGN)
+  //   coaster 1 = pisco-colada (tropical)   — left
+  //   coaster 2 = espresso-martini (bold)   — top
+  //   coaster 3 = momo-sour (energetic)     — right
+  //   coaster 4 = apple-tart (elegant)      — bottom
+  // T         → start Truth or Dare game    (replaces GAME_START)
+  // K         → start King's Game           (replaces GAME_START)
+  // G         → end game                    (replaces GAME_END)
+  useEffect(() => {
+    const DEMO_DRINKS = ['pisco-colada', 'espresso-martini', 'momo-sour', 'apple-tart']
+    const DEMO_CENTROIDS = [
+      { x: 475,  y: 950  }, // 1 — left
+      { x: 950,  y: 475  }, // 2 — top
+      { x: 1425, y: 950  }, // 3 — right
+      { x: 950,  y: 1425 }, // 4 — bottom
+    ]
+
+    // Equilateral-ish triangle around centroid (≈40 px radius) for signature
+    const makeSignature = (
+      cx: number,
+      cy: number,
+    ): [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] => [
+      { x: cx,       y: cy - 45 },
+      { x: cx + 39,  y: cy + 22 },
+      { x: cx - 39,  y: cy + 22 },
+    ]
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 's' || e.key === 'S') {
+        startSession(4)
+      } else if (e.key === 'e' || e.key === 'E') {
+        endSession()
+      } else if (e.key === 't' || e.key === 'T') {
+        startGame('truth_or_dare')
+      } else if (e.key === 'k' || e.key === 'K') {
+        startGame('kings_game')
+      } else if (e.key === 'g' || e.key === 'G') {
+        endGame()
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
+        const idx = parseInt(e.key) - 1
+        const id = `demo-coaster-${idx}`
+        const drinkId = DEMO_DRINKS[idx]
+        const centroid = DEMO_CENTROIDS[idx]
+        if (activeCoasterIdsRef.current.has(id)) {
+          // Remove existing demo coaster
+          removeCoaster(id)
+          dispatcherRef.current?.onCoasterRemoved(id)
+          activeCoasterIdsRef.current.delete(id)
+        } else {
+          // Spawn demo coaster with drink pre-assigned
+          upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detected: true, drinkId })
+          assignDrinkToCoaster(id, drinkId)
+          dispatcherRef.current?.assignDrink(id, drinkId)
+          dispatcherRef.current?.onCoasterDetected(id, centroid)
+          activeCoasterIdsRef.current.add(id)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [startSession, endSession, startGame, endGame, upsertCoaster, removeCoaster, assignDrinkToCoaster])
+
   useEffect(() => {
     const url =
       (import.meta.env.VITE_WS_URL as string | undefined) ?? 'ws://localhost:8080/ws'
