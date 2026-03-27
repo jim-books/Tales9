@@ -3,13 +3,13 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { PixiStage } from './pixi/PixiStage'
 import { UserNode } from './components/UserNode'
 import { GameOverlay } from './screens/GameOverlay'
-import { DiagnosticsOverlay } from './components/DiagnosticsOverlay'
+import { DebugPanel } from './components/DebugPanel'
 import { useAppStore } from './store/useAppStore'
 import { CANVAS_SIZE, CalibrationMapper } from './engine/CalibrationMapper'
 import { TrackingEngine } from './engine/TrackingEngine'
 import { AnimationDispatcher } from './engine/AnimationDispatcher'
 import { InputAdapter } from './engine/InputAdapter'
-import type { WsMessage } from './types'
+import type { WsMessage, GameType } from './types'
 import './App.css'
 
 function MainView(): JSX.Element {
@@ -25,7 +25,7 @@ function MainView(): JSX.Element {
   const startGame = useAppStore((s) => s.startGame)
   const endGame = useAppStore((s) => s.endGame)
 
-  const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -77,10 +77,10 @@ function MainView(): JSX.Element {
     }
   }, [upsertCoaster, removeCoaster])
 
-  // Toggle diagnostics overlay with 'D' key
+  // Toggle debug panel with 'D' key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'd' || e.key === 'D') setShowDiagnostics((v) => !v)
+      if (e.key === 'd' || e.key === 'D') setShowDebugPanel((v) => !v)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -97,25 +97,45 @@ function MainView(): JSX.Element {
   // T         → start Truth or Dare game    (replaces GAME_START)
   // K         → start King's Game           (replaces GAME_START)
   // G         → end game                    (replaces GAME_END)
+  // D         → toggle debug panel
+  const DEMO_DRINKS = ['pisco-colada', 'espresso-martini', 'momo-sour', 'apple-tart']
+  const DEMO_CENTROIDS = [
+    { x: 475,  y: 950  }, // 1 — left
+    { x: 950,  y: 475  }, // 2 — top
+    { x: 1425, y: 950  }, // 3 — right
+    { x: 950,  y: 1425 }, // 4 — bottom
+  ]
+
+  // Equilateral-ish triangle around centroid (≈40 px radius) for signature
+  const makeSignature = (
+    cx: number,
+    cy: number,
+  ): [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] => [
+    { x: cx,       y: cy - 45 },
+    { x: cx + 39,  y: cy + 22 },
+    { x: cx - 39,  y: cy + 22 },
+  ]
+
+  const handleToggleCoaster = (idx: number) => {
+    const id = `demo-coaster-${idx}`
+    const drinkId = DEMO_DRINKS[idx]
+    const centroid = DEMO_CENTROIDS[idx]
+    if (activeCoasterIdsRef.current.has(id)) {
+      // Remove existing demo coaster
+      removeCoaster(id)
+      dispatcherRef.current?.onCoasterRemoved(id)
+      activeCoasterIdsRef.current.delete(id)
+    } else {
+      // Spawn demo coaster with drink pre-assigned
+      upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detected: true, drinkId })
+      assignDrinkToCoaster(id, drinkId)
+      dispatcherRef.current?.assignDrink(id, drinkId)
+      dispatcherRef.current?.onCoasterDetected(id, centroid)
+      activeCoasterIdsRef.current.add(id)
+    }
+  }
+
   useEffect(() => {
-    const DEMO_DRINKS = ['pisco-colada', 'espresso-martini', 'momo-sour', 'apple-tart']
-    const DEMO_CENTROIDS = [
-      { x: 475,  y: 950  }, // 1 — left
-      { x: 950,  y: 475  }, // 2 — top
-      { x: 1425, y: 950  }, // 3 — right
-      { x: 950,  y: 1425 }, // 4 — bottom
-    ]
-
-    // Equilateral-ish triangle around centroid (≈40 px radius) for signature
-    const makeSignature = (
-      cx: number,
-      cy: number,
-    ): [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] => [
-      { x: cx,       y: cy - 45 },
-      { x: cx + 39,  y: cy + 22 },
-      { x: cx - 39,  y: cy + 22 },
-    ]
-
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 's' || e.key === 'S') {
         startSession(4)
@@ -129,28 +149,13 @@ function MainView(): JSX.Element {
         endGame()
       } else if (['1', '2', '3', '4'].includes(e.key)) {
         const idx = parseInt(e.key) - 1
-        const id = `demo-coaster-${idx}`
-        const drinkId = DEMO_DRINKS[idx]
-        const centroid = DEMO_CENTROIDS[idx]
-        if (activeCoasterIdsRef.current.has(id)) {
-          // Remove existing demo coaster
-          removeCoaster(id)
-          dispatcherRef.current?.onCoasterRemoved(id)
-          activeCoasterIdsRef.current.delete(id)
-        } else {
-          // Spawn demo coaster with drink pre-assigned
-          upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detected: true, drinkId })
-          assignDrinkToCoaster(id, drinkId)
-          dispatcherRef.current?.assignDrink(id, drinkId)
-          dispatcherRef.current?.onCoasterDetected(id, centroid)
-          activeCoasterIdsRef.current.add(id)
-        }
+        handleToggleCoaster(idx)
       }
     }
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [startSession, endSession, startGame, endGame, upsertCoaster, removeCoaster, assignDrinkToCoaster])
+  }, [startSession, endSession, startGame, endGame])
 
   useEffect(() => {
     const url =
@@ -231,8 +236,40 @@ function MainView(): JSX.Element {
         </div>
       )}
 
-      {/* Layer 3: Diagnostics overlay (toggle with 'D' key) */}
-      {showDiagnostics && <DiagnosticsOverlay />}
+      {/* Layer 3: Debug panel + menu button (toggle with 'D' key) */}
+      {showDebugPanel ? (
+        <DebugPanel
+          activeCoasterIds={activeCoasterIdsRef.current}
+          onStartSession={() => startSession(4)}
+          onEndSession={() => endSession()}
+          onToggleCoaster={handleToggleCoaster}
+          onStartGame={(type: GameType) => startGame(type)}
+          onEndGame={() => endGame()}
+          onClose={() => setShowDebugPanel(false)}
+        />
+      ) : (
+        <button
+          onClick={() => setShowDebugPanel(true)}
+          style={{
+            position: 'absolute',
+            top: 24,
+            left: 24,
+            zIndex: 30,
+            padding: '8px 14px',
+            background: 'rgba(0,0,0,0.85)',
+            border: '1px solid #00ff8866',
+            borderRadius: 8,
+            color: '#00ff88',
+            fontFamily: 'monospace',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.1s',
+          }}
+        >
+          ◉ DEV
+        </button>
+      )}
     </div>
   )
 }
