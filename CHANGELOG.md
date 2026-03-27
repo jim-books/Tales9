@@ -120,6 +120,38 @@ Total: 37/37
 
 ---
 
+## Session: 2026-03-27 (continued)
+
+### Games Layer + Diagnostics + Proximity Detection Complete
+
+- [x] `src/types/index.ts` — added `GAME_START { gameType }` and `GAME_END {}` to `WsMessage` union
+- [x] `src/store/useAppStore.ts` — added `startGame(type)`, `advanceGame(phase, coasterId, userId)`, `endGame()` actions
+- [x] `src/pixi/GameLayer.ts` — Truth or Dare: 4s ease-out spinning arrow; King's Game: crowns fly from centre to user positions, winner pulses; `showSpotlight()` / `hideSpotlight()` / `stop()`
+- [x] `src/pixi/ProximityBattle.ts` — jagged lightning arc + midpoint glow between two coasters within 280 px; re-randomised every frame
+- [x] `src/pixi/PixiStage.tsx` — GameLayer and ProximityBattle wired in; game state effect drives animation; proximity pairs tracked with `Map<pairKey, ProximityBattle>`
+- [x] `src/screens/GameOverlay.tsx` — React overlay (z-10) shown at phase ≥ 1: TRUTH/DARE buttons for T&D, crown + decree for King's Game; calls `endGame()` on dismiss
+- [x] `src/components/DiagnosticsOverlay.tsx` — dev panel (z-20) listing session, game state, coasters with centroids, user nodes, orders; toggle with 'D' key
+- [x] `src/App.tsx` — handles `GAME_START` / `GAME_END` WS messages; 'D' key listener; renders `<GameOverlay />` and `<DiagnosticsOverlay />`
+- [x] 41/41 tests passing, `npm run build` clean (777 modules, 488 kB bundle)
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        6 tests
+✓ AnimationDispatcher.test.ts   9 tests
+✓ useAppStore.test.ts          13 tests
+Total: 41/41
+```
+
+### Next: Polish + Backend Integration
+- [ ] iOS app: send `GAME_START` / `GAME_END` via Firestore → WebSocket bridge
+- [ ] King's Game phase 2: king chooses a decree via their UserNode panel; roulette selects victim
+- [ ] Swap 'D' key toggle for a secret corner-tap gesture (5 taps in top-right within 2s) for Android WebView
+- [ ] Proximity battle: distinct animation per drink-pair (e.g. fiery vs icy collision)
+
+---
+
 <!-- New entries go here, newest first. Format:
 
 ## Session: YYYY-MM-DD

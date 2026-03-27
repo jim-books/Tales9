@@ -6,6 +6,10 @@ import { getDrinkById } from '../data/drinkCatalog'
 import { StandbyLayer } from './StandbyLayer'
 import { CoasterAnimation } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
+import { GameLayer } from './GameLayer'
+import { ProximityBattle } from './ProximityBattle'
+
+const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
 
 /**
  * PixiStage
@@ -20,6 +24,8 @@ export function PixiStage(): JSX.Element {
   const standbyRef = useRef<StandbyLayer | null>(null)
   const animsRef = useRef(new Map<string, CoasterAnimation>())
   const spritesRef = useRef(new Map<string, IngredientSprite>())
+  const gameLayerRef = useRef<GameLayer | null>(null)
+  const battlesRef = useRef(new Map<string, ProximityBattle>())
 
   // ─── Init PixiJS once ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -51,6 +57,10 @@ export function PixiStage(): JSX.Element {
       standbyRef.current = standby
       standby.mount()
 
+      const gameLayer = new GameLayer(app)
+      gameLayer.mount()
+      gameLayerRef.current = gameLayer
+
       // Shared ticker drives all per-coaster animations
       app.ticker.add(() => {
         animsRef.current.forEach((a) => a.tick(app.ticker))
@@ -62,10 +72,14 @@ export function PixiStage(): JSX.Element {
       cancelled = true
       standbyRef.current?.destroy()
       standbyRef.current = null
+      gameLayerRef.current?.destroy()
+      gameLayerRef.current = null
       animsRef.current.forEach((a) => a.destroy())
       animsRef.current.clear()
       spritesRef.current.forEach((s) => s.destroy())
       spritesRef.current.clear()
+      battlesRef.current.forEach((b) => b.destroy())
+      battlesRef.current.clear()
       appRef.current?.destroy(true, { children: true })
       appRef.current = null
     }
@@ -87,6 +101,45 @@ export function PixiStage(): JSX.Element {
     standbyRef.current?.clearTouchPoint()
   }, [])
 
+  // ─── Game state → GameLayer ──────────────────────────────────────────────────
+  const gameState = useAppStore((s) => s.gameState)
+
+  useEffect(() => {
+    const layer = gameLayerRef.current
+    if (!layer) return
+
+    if (!gameState) {
+      layer.stop()
+      return
+    }
+
+    if (gameState.phase !== 0) return  // animation already running / result shown
+
+    const { userNodes } = useAppStore.getState()
+    const positions = userNodes.map((n) => ({
+      x: n.position.x * CANVAS_SIZE,
+      y: n.position.y * CANVAS_SIZE,
+    }))
+    if (positions.length === 0) return
+
+    const handleChosen = (idx: number): void => {
+      const { userNodes: nodes, advanceGame } = useAppStore.getState()
+      const node = nodes[idx]
+      if (!node) return
+      layer.showSpotlight(
+        { x: node.position.x * CANVAS_SIZE, y: node.position.y * CANVAS_SIZE },
+        gameState.type === 'truth_or_dare' ? 'TRUTH OR DARE?' : '♛ THE KING',
+      )
+      advanceGame(1, null, node.id)
+    }
+
+    if (gameState.type === 'truth_or_dare') {
+      layer.startTruthOrDare(positions, handleChosen)
+    } else {
+      layer.startKingsGame(positions, handleChosen)
+    }
+  }, [gameState])
+
   // ─── Reactive coaster sync ───────────────────────────────────────────────────
   const sessionActive = useAppStore((s) => s.sessionActive)
   const coasters = useAppStore((s) => s.coasters)
@@ -101,6 +154,8 @@ export function PixiStage(): JSX.Element {
       animsRef.current.clear()
       spritesRef.current.forEach((s) => { s.unmount(); s.destroy() })
       spritesRef.current.clear()
+      battlesRef.current.forEach((b) => { b.unmount(); b.destroy() })
+      battlesRef.current.clear()
       return
     }
 
@@ -127,6 +182,36 @@ export function PixiStage(): JSX.Element {
         if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
         const sprite = spritesRef.current.get(c.id)
         if (sprite) { sprite.unmount(); sprite.destroy(); spritesRef.current.delete(c.id) }
+      }
+    }
+
+    // ── Proximity battle detection ────────────────────────────────────────────
+    const activePairKeys = new Set<string>()
+    const activeCoasters = coasters.filter((c) => c.detected && c.drinkId)
+    for (let i = 0; i < activeCoasters.length; i++) {
+      for (let j = i + 1; j < activeCoasters.length; j++) {
+        const a = activeCoasters[i]
+        const b = activeCoasters[j]
+        const dx = a.centroid.x - b.centroid.x
+        const dy = a.centroid.y - b.centroid.y
+        if (Math.sqrt(dx * dx + dy * dy) < PROXIMITY_THRESHOLD) {
+          const key = `${a.id}:${b.id}`
+          activePairKeys.add(key)
+          if (!battlesRef.current.has(key)) {
+            const battle = new ProximityBattle(app, a.centroid, b.centroid)
+            battle.mount(app.stage)
+            battlesRef.current.set(key, battle)
+          } else {
+            battlesRef.current.get(key)!.updatePositions(a.centroid, b.centroid)
+          }
+        }
+      }
+    }
+    // Remove battles whose coasters moved apart
+    for (const [key, battle] of battlesRef.current) {
+      if (!activePairKeys.has(key)) {
+        battle.unmount(); battle.destroy()
+        battlesRef.current.delete(key)
       }
     }
   }, [sessionActive, coasters])

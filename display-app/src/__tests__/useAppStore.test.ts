@@ -85,4 +85,33 @@ describe('useAppStore', () => {
     const coaster = useAppStore.getState().coasters.find((c) => c.id === 'coaster-1')
     expect(coaster?.drinkId).toBe('pisco-colada')
   })
+
+  it('startGame sets phase 0 with no chosen IDs', () => {
+    useAppStore.getState().startGame('truth_or_dare')
+    const g = useAppStore.getState().gameState
+    expect(g?.type).toBe('truth_or_dare')
+    expect(g?.phase).toBe(0)
+    expect(g?.chosenCoasterId).toBeNull()
+    expect(g?.chosenUserId).toBeNull()
+  })
+
+  it('advanceGame updates phase and chosen IDs', () => {
+    useAppStore.getState().startGame('truth_or_dare')
+    useAppStore.getState().advanceGame(1, 'coaster-x', 'user-0')
+    const g = useAppStore.getState().gameState
+    expect(g?.phase).toBe(1)
+    expect(g?.chosenCoasterId).toBe('coaster-x')
+    expect(g?.chosenUserId).toBe('user-0')
+  })
+
+  it('advanceGame is a no-op when no game is active', () => {
+    useAppStore.getState().advanceGame(1, null, null)
+    expect(useAppStore.getState().gameState).toBeNull()
+  })
+
+  it('endGame clears game state', () => {
+    useAppStore.getState().startGame('kings_game')
+    useAppStore.getState().endGame()
+    expect(useAppStore.getState().gameState).toBeNull()
+  })
 })

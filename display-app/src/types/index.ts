@@ -69,3 +69,5 @@ export type WsMessage =
   | { type: 'SESSION_END'; payload: Record<string, never> }
   | { type: 'ORDER_UPDATE'; payload: { orderId: string; status: OrderStatus } }
   | { type: 'COASTER_ASSIGN'; payload: { coasterId: string; drinkId: string } }
+  | { type: 'GAME_START'; payload: { gameType: GameType } }
+  | { type: 'GAME_END'; payload: Record<string, never> }

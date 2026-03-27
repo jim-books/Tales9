@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { PixiStage } from './pixi/PixiStage'
 import { UserNode } from './components/UserNode'
+import { GameOverlay } from './screens/GameOverlay'
+import { DiagnosticsOverlay } from './components/DiagnosticsOverlay'
 import { useAppStore } from './store/useAppStore'
 import { CANVAS_SIZE, CalibrationMapper } from './engine/CalibrationMapper'
 import { TrackingEngine } from './engine/TrackingEngine'
@@ -20,6 +22,10 @@ function MainView(): JSX.Element {
   const assignDrinkToCoaster = useAppStore((s) => s.assignDrinkToCoaster)
   const upsertCoaster = useAppStore((s) => s.upsertCoaster)
   const removeCoaster = useAppStore((s) => s.removeCoaster)
+  const startGame = useAppStore((s) => s.startGame)
+  const endGame = useAppStore((s) => s.endGame)
+
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -71,6 +77,15 @@ function MainView(): JSX.Element {
     }
   }, [upsertCoaster, removeCoaster])
 
+  // Toggle diagnostics overlay with 'D' key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'd' || e.key === 'D') setShowDiagnostics((v) => !v)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   useEffect(() => {
     const url =
       (import.meta.env.VITE_WS_URL as string | undefined) ?? 'ws://localhost:8080/ws'
@@ -96,6 +111,10 @@ function MainView(): JSX.Element {
         } else if (msg.type === 'COASTER_ASSIGN') {
           assignDrinkToCoaster(msg.payload.coasterId, msg.payload.drinkId)
           dispatcherRef.current?.assignDrink(msg.payload.coasterId, msg.payload.drinkId)
+        } else if (msg.type === 'GAME_START') {
+          startGame(msg.payload.gameType)
+        } else if (msg.type === 'GAME_END') {
+          endGame()
         }
       } catch {
         // Ignore malformed messages
@@ -110,7 +129,7 @@ function MainView(): JSX.Element {
       ws.close()
       wsRef.current = null
     }
-  }, [startSession, endSession, updateOrderStatus, assignDrinkToCoaster])
+  }, [startSession, endSession, updateOrderStatus, assignDrinkToCoaster, startGame, endGame])
 
   return (
     <div
@@ -124,10 +143,13 @@ function MainView(): JSX.Element {
         overflow: 'hidden',
       }}
     >
-      {/* Layer 0: PixiJS canvas (standby ambient + coaster animations) */}
+      {/* Layer 0: PixiJS canvas (standby ambient + coaster animations + game layer) */}
       <PixiStage />
 
-      {/* Layer 1: User Node overlays */}
+      {/* Layer 1: Game result overlay (shown after arrow/crown animation completes) */}
+      <GameOverlay />
+
+      {/* Layer 2: User Node overlays */}
       {sessionActive && (
         <div
           style={{
@@ -142,6 +164,9 @@ function MainView(): JSX.Element {
           ))}
         </div>
       )}
+
+      {/* Layer 3: Diagnostics overlay (toggle with 'D' key) */}
+      {showDiagnostics && <DiagnosticsOverlay />}
     </div>
   )
 }

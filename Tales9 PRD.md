@@ -1,4 +1,4 @@
-# Tales9: Smart Bar Table Product Requirements Document
+  # Tales9: Smart Bar Table Product Requirements Document
 
 **Version:** 2.0 (MVP Pilot at Barcode)  
 **Last Updated:** March 27, 2026  

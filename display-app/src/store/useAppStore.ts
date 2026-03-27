@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { UserNode, Coaster, Order, GameState, UserColor, Point, OrderStatus } from '../types'
+import type { UserNode, Coaster, Order, GameState, GameType, UserColor, Point, OrderStatus } from '../types'
 
 const USER_COLORS: UserColor[] = ['blue', 'green', 'orange', 'purple']
 
@@ -41,6 +41,9 @@ interface AppState {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void
 
   setGameState: (game: GameState | null) => void
+  startGame: (type: GameType) => void
+  advanceGame: (phase: number, chosenCoasterId: string | null, chosenUserId: string | null) => void
+  endGame: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -125,4 +128,16 @@ export const useAppStore = create<AppState>((set) => ({
     })),
 
   setGameState: (gameState) => set({ gameState }),
+
+  startGame: (type) =>
+    set({ gameState: { type, phase: 0, chosenCoasterId: null, chosenUserId: null } }),
+
+  advanceGame: (phase, chosenCoasterId, chosenUserId) =>
+    set((s) =>
+      s.gameState
+        ? { gameState: { ...s.gameState, phase, chosenCoasterId, chosenUserId } }
+        : {},
+    ),
+
+  endGame: () => set({ gameState: null }),
 }))
