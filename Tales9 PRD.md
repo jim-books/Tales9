@@ -862,6 +862,7 @@ The backend will run as an **embedded local server on the table device**, design
 - Communication with bartender iOS app over local network
 - Event broadcasting to display app and bartender app
 - Persistence of operational data and configuration
+- Background sync of completed orders and session data to Firebase
 - Diagnostics and table status reporting
 
 #### API / Communication
@@ -880,54 +881,128 @@ The backend will run as an **embedded local server on the table device**, design
 **Stored Data Includes:**
 - active and historical sessions
 - user slot assignments
-- drink catalog cache
+- drink catalog cache (populated from Firebase at startup)
 - order records
 - coaster assignment mappings
 - calibration values
-- local configuration
+- local configuration (synced from Firebase at startup)
 - diagnostic and event logs
+
+#### Cloud Sync Layer (Firebase)
+- **Firebase Firestore** — configuration sync, multi-table venue settings, completed order backup
+- **Firebase Storage** — remote asset delivery: logos, drink images, sprite graphics
+- **Firebase Analytics** (optional) — usage metrics and session telemetry
+
+**Data Ownership by Layer:**
+
+| Data Type | Storage | Rationale |
+|-----------|---------|-----------|
+| Real-time tracking state | Local only | Latency-critical; no round-trip tolerated |
+| Active session state | Local (primary) + Firebase (background sync) | Offline resilience |
+| Orders | Local (primary) + Firebase (backup/sync) | Must work if internet drops |
+| Drink catalog / Menu | Firebase → cached locally in SQLite | Easy remote updates, offline fallback |
+| Assets (logos, images, sprites) | Firebase Storage → cached locally | Remote updates without redeploy |
+| Multi-table config | Firebase | Central management across venues |
+| Analytics / Logs | Firebase | Centralized monitoring and debugging |
+
+**Startup Sequence:**
+1. Table pulls latest config, menu, and assets from Firebase → caches to SQLite
+2. During session: all real-time operations use local SQLite; Firebase syncs in background
+3. If internet drops: full functionality continues from local cache
+4. Completed sessions and orders are synced to Firebase when connectivity is restored
 
 ---
 
 ### Bartender iOS App
 - **Platform:** Native iOS application
 - **Primary Device Capability:** NFC reading for coaster assignment
-- **Network Model:** Connects to the table's local embedded server via local Wi-Fi
-- **Communication:** REST API + WebSocket updates
+- **Network Model:** Hybrid — connects to both the table's local embedded server and Firebase
+- **Communication:** REST API + WebSocket updates (local); Firebase SDK (cloud)
+
+**Connection Modes:**
+
+| Mode | When Used | Capabilities |
+|------|-----------|--------------|
+| **Local (primary)** | On venue Wi-Fi, during active service | Full real-time control: session management, NFC coaster assignment, live order updates |
+| **Firebase (secondary)** | Remote or off-network | Order monitoring, session history, menu and config management |
 
 **Responsibilities:**
-- Start and end sessions
-- Set user count
-- Receive table orders in real time
+- Start and end sessions (local connection)
+- Set user count (local connection)
+- Receive table orders in real time (local connection during service; Firebase when remote)
 - Update drink preparation state
-- Assign coaster IDs via NFC scan
+- Assign coaster IDs via NFC scan (requires local connection — NFC triggers table animation)
 - Enter printed coaster number manually as backup
 - Monitor table status and connectivity
+- Access historical session data and analytics (Firebase)
+- Push menu or configuration updates to the table (Firebase → table cache)
 
 ---
 
 ### Networking Model
 
-The MVP uses a **local-first architecture**.
+The MVP uses a **hybrid local-first architecture**: all latency-critical and session-critical operations run locally on the table device, while Firebase provides cloud sync for configuration, assets, and analytics.
 
-#### Primary Characteristics
-- The table device acts as the **local source of truth**
+#### Local Network (Primary Path)
+- The table device acts as the **local source of truth** for all active session state
 - The bartender iOS app connects to the table over the **same local Wi-Fi network**
 - Core operations remain functional even if internet access is unavailable
-- Internet connectivity is optional for the MVP and not required for core session flow
+- Real-time coaster tracking, order placement, and animation triggering never touch the internet
+
+#### Firebase Sync (Secondary Path)
+- At startup, the table pulls the latest drink catalog, brand assets, and venue configuration from Firebase and caches them locally in SQLite
+- During a session, completed orders and session events are synced to Firebase in the background
+- The bartender iOS app can connect directly to Firebase for order monitoring when outside the venue network (useful for remote management and debugging)
+- If internet connectivity is unavailable, all cached data serves as the fallback; sync resumes when connectivity is restored
+
+#### Path Decision Summary
+
+| Operation | Path | Rationale |
+|-----------|------|-----------|
+| Coaster detection → animation | Local only | <100ms latency requirement |
+| Order placement | Local → Firebase (async) | Reliability first, backup second |
+| Session start/end | Local → Firebase (async) | Offline resilience |
+| Menu / catalog updates | Firebase → local cache | Remote update without redeploy |
+| Asset delivery | Firebase Storage → local cache | Remote update without redeploy |
+| Multi-table config | Firebase | Central management |
+| Analytics | Firebase | Centralized monitoring |
 
 #### Benefits
-- Lower latency for order and animation synchronization
-- Greater reliability during venue operation
-- Reduced dependency on cloud services
-- Better support for offline or degraded network conditions
+- Sub-100ms coaster response (local path, zero internet dependency)
+- Offline resilience during internet outages (local cache fallback)
+- Remote debugging and development visibility (Firebase)
+- Easy menu and asset updates without redeploy (Firebase)
+- Multi-table venue configuration sync (Firebase)
 
 ---
 
 ### Architecture Principles
 
 #### Local-First Operation
-All essential user and bartender workflows must continue functioning without internet access, including:
+All essential user and bartender workflows must continue functioning without internet access. The system distinguishes between data that is strictly local and data that is cloud-synced:
+
+**Local only (never sent to cloud during session):**
+- Real-time coaster tracking state
+- Touch input processing and calibration
+- Active coaster-to-drink assignments
+
+**Local primary, Firebase background sync:**
+- Active session state (users, slots, color assignments)
+- Orders (local is authoritative; Firebase receives async copies)
+- Completed session records
+
+**Firebase primary, locally cached:**
+- Drink catalog and menu content
+- Brand assets (logos, drink images, sprite graphics)
+- Venue configuration and multi-table settings
+
+**Firebase only:**
+- Analytics and usage telemetry
+- Multi-table management and venue-wide configuration
+
+**Cache invalidation:** On startup, the table fetches the latest catalog, assets, and config from Firebase. Cached data is used immediately if Firebase is unreachable. Cache is versioned by a server-provided `updatedAt` timestamp; stale items are replaced on successful sync.
+
+The following workflows must remain fully functional with no internet access:
 - session control
 - ordering
 - coaster assignment
@@ -981,11 +1056,14 @@ Each drink profile may include:
 | **Frontend State** | Zustand |
 | **Frontend Build Tool** | Vite |
 | **Embedded Backend** | Kotlin + Ktor |
-| **Database** | SQLite |
+| **Local Database** | SQLite |
 | **Persistence Layer** | Room |
 | **Realtime Communication** | WebSockets |
 | **Operational API** | REST |
 | **Bartender App** | Native iOS app with NFC support |
+| **Cloud Sync / Config** | Firebase Firestore |
+| **Asset Storage** | Firebase Storage |
+| **Analytics** | Firebase Analytics |
 
 ---
 
@@ -997,14 +1075,18 @@ Each drink profile may include:
 2. **Color Assignment:** The system auto-assigns colors to User Nodes in a fixed order (e.g., User 1 = Blue, User 2 = Green, etc.)
 3. **User Node Spawn Positions:** Predefined spawn positions align with standard seating arrangement at Barcode (4 positions around the square table)
 4. **Coaster Inventory:** Barcode has at least 4 unique coaster geometric signatures with NFC tags for the MVP
-5. **Network Environment:** The table and bartender iOS app operate on the same local Wi-Fi network at Barcode
-6. **Drink Menu Data:** Barcode provides a structured menu with drink names, ingredients, descriptions, prices, and photos
+5. **Network Environment:** The table and bartender iOS app operate on the same local Wi-Fi network at Barcode; internet access is available but not guaranteed
+6. **Drink Menu Data:** Barcode provides a structured menu with drink names, ingredients, descriptions, prices, and photos — delivered via Firebase and cached locally
 7. **Quiz Logic:** Quiz recommendations use a rule-based or weighted algorithm (not AI-generated) for the MVP
-8. **Sprite Character Library:** A library of Ingredient Sprite characters is pre-designed for common ingredients (fruits, spirits, flavors)
+8. **Sprite Character Library:** A library of Ingredient Sprite characters is pre-designed for common ingredients (fruits, spirits, flavors) and hosted in Firebase Storage
 9. **Interaction Proximity Threshold:** "Close together" for drink interactions is defined as approximately 10–15cm distance between coaster centroids
 10. **Order Capacity:** Maximum 4 simultaneous orders per session (one per user)
 11. **Drink Removal Delay:** Sprite despawn occurs after approximately 10–15 seconds of drink removal (prevents accidental removal from triggering immediate despawn)
 12. **NFC Reader:** The bartender's iPhone has NFC reading capability enabled (available on iPhone 7 and later with iOS 11+)
+13. **Firebase Project:** A Firebase project is provisioned for Tales9 with Firestore, Storage, and Analytics enabled
+14. **Venue ID:** Barcode operates as a single-table venue for the MVP; the Firebase data model uses a `venueId / tableId` hierarchy to support future multi-table expansion
+15. **Asset Versioning:** Firebase Storage assets are versioned via Firestore metadata (`version` + `updatedAt` fields); the table re-downloads assets only when the server version is newer than the locally cached version
+16. **Cache Expiration:** Locally cached menu and config data is considered stale after 24 hours and triggers a background refresh on next startup with connectivity
 
 ### Open Questions
 
@@ -1016,6 +1098,11 @@ Each drink profile may include:
 6. **Sprite Removal Timing:** What is the exact delay before an Ingredient Sprite despawns after drink removal (currently assumed 10–15 seconds)?
 7. **Quiz Question Content:** Has Barcode provided specific quiz questions and answer options, or should we design generic mixology-focused questions for the MVP?
 8. **Common Space Default State:** What specific ambient animation or visual theme should display in the Common Space during standby and idle moments?
+9. **Firebase Security Rules:** What are the access control boundaries for Firestore and Firebase Storage? Who can write menu data and config — admin SDK only, or venue manager via app?
+10. **Offline Cache Expiration Policy:** Should cached menu/config data expire after a fixed duration (currently assumed 24 hours), or should it remain valid indefinitely until a successful sync replaces it?
+11. **Multi-Table Venue ID Structure:** What is the Firebase document hierarchy for a multi-table venue? Proposed structure: `venues/{venueId}/tables/{tableId}/sessions/{sessionId}` — does this match expected scale?
+12. **Asset Versioning Strategy:** Should assets be versioned by hash (content-addressed) or by a server-managed integer version field? Hash-based versioning avoids cache invalidation bugs but requires infrastructure changes.
+13. **Firebase Analytics Consent:** Is guest analytics data subject to any consent or PDPO (Hong Kong Personal Data Privacy Ordinance) requirements at Barcode?
 
 ---
 
