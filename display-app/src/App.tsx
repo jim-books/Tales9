@@ -10,6 +10,7 @@ import { TrackingEngine } from './engine/TrackingEngine'
 import { AnimationDispatcher } from './engine/AnimationDispatcher'
 import { InputAdapter } from './engine/InputAdapter'
 import type { WsMessage, GameType } from './types'
+import type { FrameDiagnosis } from './engine/TrackingEngine'
 import './App.css'
 
 function MainView(): JSX.Element {
@@ -26,6 +27,10 @@ function MainView(): JSX.Element {
   const endGame = useAppStore((s) => s.endGame)
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [frameDiagnosis, setFrameDiagnosis] = useState<FrameDiagnosis>({
+    rawTouchPoints: [],
+    clusters: [],
+  })
 
   const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -41,6 +46,7 @@ function MainView(): JSX.Element {
 
     const adapter = new InputAdapter('touch', (points) => {
       const tracked = tracker.processFrame(points)
+      setFrameDiagnosis(tracker.getLastDiagnosis())
       const activeIds = new Set(tracked.filter((c) => c.active).map((c) => c.id))
 
       for (const coaster of tracked) {
@@ -240,6 +246,7 @@ function MainView(): JSX.Element {
       {showDebugPanel ? (
         <DebugPanel
           activeCoasterIds={activeCoasterIdsRef.current}
+          frameDiagnosis={frameDiagnosis}
           onStartSession={() => startSession(4)}
           onEndSession={() => endSession()}
           onToggleCoaster={handleToggleCoaster}

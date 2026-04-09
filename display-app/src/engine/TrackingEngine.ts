@@ -28,6 +28,27 @@ export interface TrackedCoaster {
   active: boolean
 }
 
+export interface ClusterTypeMatch {
+  typeId: string
+  ratio: [number, number, number]
+  delta: number
+  qualifies: boolean
+  active: boolean
+}
+
+export interface ClusterDiagnosis {
+  points: CoasterTouchSignature
+  centroid: Point
+  ratio: [number, number, number]
+  closestTypes: ClusterTypeMatch[]
+  qualifiesAnyType: boolean
+}
+
+export interface FrameDiagnosis {
+  rawTouchPoints: Point[]
+  clusters: ClusterDiagnosis[]
+}
+
 /** Compute the three inter-point distance ratios that define a coaster's signature */
 function geometricSignature(pts: CoasterTouchSignature): [number, number, number] {
   const [a, b, c] = pts
@@ -47,10 +68,21 @@ function signaturesMatch(
   return s1.every((v, i) => Math.abs(v - s2[i]) < SIGNATURE_TOLERANCE)
 }
 
+function signatureDelta(
+  s1: [number, number, number],
+  s2: [number, number, number],
+): number {
+  return Math.max(...s1.map((v, i) => Math.abs(v - s2[i])))
+}
+
 export class TrackingEngine {
   private tracked = new Map<string, TrackedCoaster>()
   private mapper: CalibrationMapper
   private nextId = 1
+  private lastDiagnosis: FrameDiagnosis = {
+    rawTouchPoints: [],
+    clusters: [],
+  }
 
   constructor(mapper: CalibrationMapper) {
     this.mapper = mapper
@@ -96,11 +128,30 @@ export class TrackingEngine {
       }
     }
 
+    this.lastDiagnosis = {
+      rawTouchPoints: rawPoints,
+      clusters: clusters.map((cluster) => {
+        const ratio = geometricSignature(cluster)
+        const closestTypes = this.getClosestTypes(ratio)
+        return {
+          points: cluster,
+          centroid: this.mapper.centroidOf(cluster),
+          ratio,
+          closestTypes,
+          qualifiesAnyType: closestTypes.some((t) => t.qualifies),
+        }
+      }),
+    }
+
     return Array.from(this.tracked.values())
   }
 
   getActiveCoasters(): TrackedCoaster[] {
     return Array.from(this.tracked.values()).filter((c) => c.active)
+  }
+
+  getLastDiagnosis(): FrameDiagnosis {
+    return this.lastDiagnosis
   }
 
   private clusterPoints(points: Point[]): CoasterTouchSignature[] {
@@ -136,5 +187,21 @@ export class TrackingEngine {
       }
     }
     return undefined
+  }
+
+  private getClosestTypes(sig: [number, number, number], limit = 3): ClusterTypeMatch[] {
+    return Array.from(this.tracked.values())
+      .map((coaster) => {
+        const typeRatio = geometricSignature(coaster.signature)
+        return {
+          typeId: coaster.id,
+          ratio: typeRatio,
+          delta: signatureDelta(sig, typeRatio),
+          qualifies: signaturesMatch(sig, typeRatio),
+          active: coaster.active,
+        }
+      })
+      .sort((a, b) => a.delta - b.delta)
+      .slice(0, limit)
   }
 }

@@ -1,11 +1,15 @@
 import { useAppStore } from '../store/useAppStore'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import type { GameType } from '../types'
+import type { FrameDiagnosis } from '../engine/TrackingEngine'
 
 const px = (n: number): string => Math.round(n).toString()
+const norm = (n: number): string => n.toFixed(3)
+const ratio = (n: number): string => n.toFixed(3)
 
 export interface DebugPanelProps {
   activeCoasterIds: Set<string>
+  frameDiagnosis: FrameDiagnosis
   onStartSession: () => void
   onEndSession: () => void
   onToggleCoaster: (idx: number) => void
@@ -25,6 +29,7 @@ export interface DebugPanelProps {
  */
 export function DebugPanel({
   activeCoasterIds,
+  frameDiagnosis,
   onStartSession,
   onEndSession,
   onToggleCoaster,
@@ -221,6 +226,54 @@ export function DebugPanel({
               {`  [${c.id}] ${c.detected ? '◉' : '○'}  ` +
                 `pos=(${px(c.centroid.x)},${px(c.centroid.y)})  ` +
                 `drink=${c.drinkId ?? '—'}\n`}
+            </div>
+          ))
+        )}
+        <div>{'─── Touch Point ──────────────────────\n'}</div>
+        {frameDiagnosis.rawTouchPoints.length === 0 ? (
+          <div>{'  (none)\n'}</div>
+        ) : (
+          frameDiagnosis.rawTouchPoints.map((point, idx) => (
+            <div key={`touch-${idx}`}>
+              {`  [T${idx + 1}] norm=(${norm(point.x)},${norm(point.y)})  ` +
+                `px=(${px(point.x * CANVAS_SIZE)},${px(point.y * CANVAS_SIZE)})\n`}
+            </div>
+          ))
+        )}
+        <div>{'─── Cluster ──────────────────────────\n'}</div>
+        {frameDiagnosis.clusters.length === 0 ? (
+          <div>{'  (none)\n'}</div>
+        ) : (
+          frameDiagnosis.clusters.map((cluster, idx) => (
+            <div key={`cluster-${idx}`}>
+              <div>
+                {`  [C${idx + 1}] centroid=(${px(cluster.centroid.x)},${px(cluster.centroid.y)})  ` +
+                  `qualify=${cluster.qualifiesAnyType ? 'YES' : 'NO'}\n`}
+              </div>
+              <div>
+                {`    points: ` +
+                  cluster.points
+                    .map(
+                      (p, pIdx) =>
+                        `P${pIdx + 1}=(${px(p.x * CANVAS_SIZE)},${px(p.y * CANVAS_SIZE)})`,
+                    )
+                    .join('  ') +
+                  '\n'}
+              </div>
+              <div>
+                {`    ratio: [${ratio(cluster.ratio[0])}, ${ratio(cluster.ratio[1])}, ${ratio(cluster.ratio[2])}]\n`}
+              </div>
+              {cluster.closestTypes.length === 0 ? (
+                <div>{'    closest types: (none)\n'}</div>
+              ) : (
+                cluster.closestTypes.map((type, typeIdx) => (
+                  <div key={`cluster-${idx}-type-${type.typeId}-${typeIdx}`}>
+                    {`    closest #${typeIdx + 1}: ${type.typeId}  ` +
+                      `delta=${ratio(type.delta)}  qualify=${type.qualifies ? 'YES' : 'NO'}  ` +
+                      `state=${type.active ? 'active' : 'inactive'}\n`}
+                  </div>
+                ))
+              )}
             </div>
           ))
         )}
