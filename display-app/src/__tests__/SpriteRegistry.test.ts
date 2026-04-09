@@ -150,19 +150,19 @@ describe('orientationForEdge', () => {
     expect(o.rotation).toBe(0)
   })
 
-  it('top edge: flip x, no rotation', () => {
+  it('top edge: no flip, π rotation (body extends down into canvas, character faces left)', () => {
     const o = orientationForEdge('top')
-    expect(o.scaleX).toBe(-1)
-    expect(o.rotation).toBe(0)
+    expect(o.scaleX).toBe(1)
+    expect(o.rotation).toBeCloseTo(Math.PI)
   })
 
-  it('right edge: no flip, -π/2 rotation', () => {
+  it('right edge: no flip, -π/2 rotation (body extends left into canvas, character faces up)', () => {
     const o = orientationForEdge('right')
     expect(o.scaleX).toBe(1)
     expect(o.rotation).toBeCloseTo(-Math.PI / 2)
   })
 
-  it('left edge: no flip, +π/2 rotation', () => {
+  it('left edge: no flip, +π/2 rotation (body extends right into canvas, character faces down)', () => {
     const o = orientationForEdge('left')
     expect(o.scaleX).toBe(1)
     expect(o.rotation).toBeCloseTo(Math.PI / 2)

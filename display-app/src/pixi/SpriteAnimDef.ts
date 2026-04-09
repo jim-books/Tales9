@@ -50,7 +50,7 @@ const APPLE_TART_DEF: SpriteAnimDef = {
     animationSpeed: 0.12,
     loops: -1,
   },
-  scale: 3.0,
+  scale: 1.5,
 }
 
 // ─── Registry ────────────────────────────────────────────────────────────────

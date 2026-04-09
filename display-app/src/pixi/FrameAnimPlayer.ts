@@ -54,18 +54,22 @@ export class AnimStateMachine {
  * Returns the scaleX and rotation to apply to the walk sprite so it faces the
  * direction of clockwise perimeter travel on a y-down 1900×1900 canvas.
  *
- * Clockwise (y-down):
- *   bottom → right (+x)  : scaleX=1, rotation=0
- *   right  → up   (-y)   : rotation=-π/2
- *   top    → left (-x)   : scaleX=-1, rotation=0
- *   left   → down (+y)   : rotation=+π/2
+ * Assumes anchor(0.5, 1.0) — feet at the registration point, body extends
+ * in the local -y direction. Each rotation ensures the body extends INTO the
+ * canvas (away from the edge) and the character faces its direction of travel.
+ *
+ * PixiJS rotation is CW-positive, y-down:
+ *   bottom → right (+x) : rotation=0      body goes up    (-y→-y)   faces right ✓
+ *   right  → up   (-y)  : rotation=-π/2   body goes left  (-y→-x)   faces up    ✓
+ *   top    → left (-x)  : rotation=π      body goes down  (-y→+y)   faces left  ✓
+ *   left   → down (+y)  : rotation=+π/2   body goes right (-y→+x)   faces down  ✓
  */
 export function orientationForEdge(edge: WalkEdge): { scaleX: 1 | -1; rotation: number } {
   switch (edge) {
-    case 'bottom': return { scaleX: 1,  rotation: 0 }
-    case 'right':  return { scaleX: 1,  rotation: -Math.PI / 2 }
-    case 'top':    return { scaleX: -1, rotation: 0 }
-    case 'left':   return { scaleX: 1,  rotation: Math.PI / 2 }
+    case 'bottom': return { scaleX: 1, rotation: 0 }
+    case 'right':  return { scaleX: 1, rotation: -Math.PI / 2 }
+    case 'top':    return { scaleX: 1, rotation: Math.PI }
+    case 'left':   return { scaleX: 1, rotation: Math.PI / 2 }
   }
 }
 
@@ -106,7 +110,7 @@ export class FrameAnimPlayer {
     this.fallSprite = new AnimatedSprite(fallTextures)
     this.fallSprite.autoUpdate = false
     this.fallSprite.animationSpeed = def.fall.animationSpeed
-    this.fallSprite.anchor.set(0.5, 0.5)
+    this.fallSprite.anchor.set(0.5, 1.0)
     this.fallSprite.scale.set(def.scale)
     this.fallSprite.loop = true  // onLoop fires each cycle; we stop externally
     this.fallSprite.onLoop = () => {
@@ -121,7 +125,7 @@ export class FrameAnimPlayer {
     this.walkSprite = new AnimatedSprite(walkTextures)
     this.walkSprite.autoUpdate = false
     this.walkSprite.animationSpeed = def.walk.animationSpeed
-    this.walkSprite.anchor.set(0.5, 0.5)
+    this.walkSprite.anchor.set(0.5, 1.0)
     this.walkSprite.scale.set(def.scale)
     this.walkSprite.loop = true
     this.walkSprite.play()
