@@ -152,6 +152,37 @@ Total: 41/41
 
 ---
 
+## Session: 2026-04-10
+
+### Frame-Based Ingredient Sprite System (Apple Tart)
+
+- [x] `display-app/public/sprites/apple-tart/fall/Apple8bitFallSep{1..10}.png` — 10 fall keyframes copied from SpriteAnimation/AppleTart/
+- [x] `display-app/public/sprites/apple-tart/walk/Apple8bitWalkSep{1..5}.png` — 5 walk keyframes copied
+- [x] `src/pixi/SpriteAnimDef.ts` — `SpriteFrameSet` + `SpriteAnimDef` protocol interfaces; Apple Tart def (fall 10 frames ×2 loops, walk 5 frames ×∞); `spriteRegistry` Map; `getAllSpriteUrls()` for pre-loading
+- [x] `src/pixi/FrameAnimPlayer.ts` — `AnimStateMachine` (pure TS, testable): FALL_ANIM → FALL_WAIT → WALK state machine with loop counting; `orientationForEdge()`: WalkEdge → scaleX/rotation for clockwise perimeter walk; `FrameAnimPlayer`: wraps two PixiJS `AnimatedSprite` instances (fall + walk), drives them via `autoUpdate=false` + manual `tick()`, swaps sprites on transition
+- [x] `src/pixi/IngredientSprite.ts` — checks `spriteRegistry` at construction; uses `FrameAnimPlayer` when def found; `notifyPhysicsLanded()` called in `stepDrop()` on landing; `player.tick()` + `updateWalkOrientation()` called each frame; `body`/`label` made optional; procedural placeholder unchanged for unregistered characters
+- [x] `src/pixi/PixiStage.tsx` — `.then()` made `async`; `await Assets.load(getAllSpriteUrls())` before rest of init; second `cancelled` guard added for StrictMode safety
+- [x] `src/__tests__/SpriteRegistry.test.ts` — 25 tests: registry shape, frame counts, URL conventions, state machine transitions (FALL_ANIM/FALL_WAIT/WALK), orientation mapping for all 4 edges
+- [x] 66/66 tests passing, `npm run build` clean (779 modules)
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        6 tests
+✓ AnimationDispatcher.test.ts   9 tests
+✓ useAppStore.test.ts          13 tests
+✓ SpriteRegistry.test.ts       25 tests
+Total: 66/66
+```
+
+### Next
+- [ ] Manual QA: trigger apple-tart coaster via debug panel, verify fall animation plays 2× then walking begins
+- [ ] Tune `animationSpeed` and `scale` values in `SpriteAnimDef.ts` after visual review
+- [ ] Register remaining characters (peach, pineapple, coffee_bean) once assets are ready
+
+---
+
 <!-- New entries go here, newest first. Format:
 
 ## Session: YYYY-MM-DD

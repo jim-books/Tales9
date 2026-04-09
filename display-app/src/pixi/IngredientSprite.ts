@@ -1,7 +1,7 @@
 import { Container, Graphics, Text, TextStyle, type Ticker } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
-
-type WalkEdge = 'top' | 'right' | 'bottom' | 'left'
+import { spriteRegistry } from './SpriteAnimDef'
+import { FrameAnimPlayer, type WalkEdge } from './FrameAnimPlayer'
 
 const EDGE_MARGIN = 16   // px from canvas edge when "landed"
 const DROP_SPEED  = 3    // px per frame while dropping
@@ -33,8 +33,12 @@ function hueToColor(hue: number): number {
 /**
  * IngredientSprite
  *
- * A cartoon placeholder character that spawns near a coaster, drops to the
- * nearest canvas edge, then walks clockwise around the perimeter.
+ * Spawns near a coaster, drops to the nearest canvas edge, then walks
+ * clockwise around the perimeter.
+ *
+ * When the character key is registered in spriteRegistry, a real frame-based
+ * animation (FrameAnimPlayer) is used. Otherwise falls back to a procedural
+ * Graphics placeholder so unregistered characters still render.
  */
 export class IngredientSprite {
   readonly container: Container
@@ -45,8 +49,11 @@ export class IngredientSprite {
   private landX = 0
   private landY = 0
   private walkDir: 1 | -1 = 1
-  private body: Graphics
-  private label: Text
+  // Placeholder graphics — only used when no SpriteAnimDef is registered
+  private body?: Graphics
+  private label?: Text
+  // Frame-based animation — used when a SpriteAnimDef is registered
+  private player?: FrameAnimPlayer
 
   constructor(character: string, spawnX: number, spawnY: number) {
     this.x = spawnX
@@ -73,22 +80,27 @@ export class IngredientSprite {
     // Walk direction: always clockwise
     this.walkDir = 1
 
-    // Build placeholder sprite graphics
-    const hue = charToHue(character)
-    const color = hueToColor(hue)
+    const def = spriteRegistry.get(character)
+    if (def) {
+      // Real frame-based animation
+      this.player = new FrameAnimPlayer(def, this.container)
+    } else {
+      // Procedural placeholder
+      const hue = charToHue(character)
+      const color = hueToColor(hue)
+      this.body = new Graphics()
+      this.drawBody(color)
+      this.container.addChild(this.body)
 
-    this.body = new Graphics()
-    this.drawBody(color)
-    this.container.addChild(this.body)
-
-    const label = character.slice(0, 3).toUpperCase()
-    this.label = new Text({
-      text: label,
-      style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontWeight: 'bold' }),
-    })
-    this.label.anchor.set(0.5, 0)
-    this.label.y = 16
-    this.container.addChild(this.label)
+      const labelText = character.slice(0, 3).toUpperCase()
+      this.label = new Text({
+        text: labelText,
+        style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontWeight: 'bold' }),
+      })
+      this.label.anchor.set(0.5, 0)
+      this.label.y = 16
+      this.container.addChild(this.label)
+    }
 
     this.container.x = this.x
     this.container.y = this.y
@@ -107,6 +119,7 @@ export class IngredientSprite {
   }
 
   destroy(): void {
+    this.player?.destroy()
     this.container.destroy({ children: true })
   }
 
@@ -115,7 +128,9 @@ export class IngredientSprite {
       this.stepDrop()
     } else {
       this.stepWalk()
+      this.player?.updateWalkOrientation(this.edge)
     }
+    this.player?.tick(_ticker)
     this.container.x = this.x
     this.container.y = this.y
   }
@@ -127,6 +142,7 @@ export class IngredientSprite {
     if (dist < 4) {
       this.x = this.landX
       this.y = this.landY
+      this.player?.notifyPhysicsLanded()
       this.state = 'walking'
       return
     }
@@ -172,6 +188,7 @@ export class IngredientSprite {
   }
 
   private drawBody(color: number): void {
+    if (!this.body) return
     // Body circle
     this.body.circle(0, 0, 14).fill({ color, alpha: 0.9 })
     // Eyes

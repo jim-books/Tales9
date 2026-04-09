@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Application } from 'pixi.js'
+import { Application, Assets } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
+import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
 import { getDrinkById } from '../data/drinkCatalog'
 import { StandbyLayer } from './StandbyLayer'
@@ -39,7 +40,19 @@ export function PixiStage(): JSX.Element {
       antialias: true,
       resolution: 1,
       autoDensity: false,
-    }).then(() => {
+    }).then(async () => {
+      if (cancelled) {
+        app.destroy(true)
+        return
+      }
+
+      // Pre-load all registered sprite textures into the PixiJS asset cache
+      // so FrameAnimPlayer can access them synchronously via Assets.get()
+      const spriteUrls = getAllSpriteUrls()
+      if (spriteUrls.length > 0) {
+        await Assets.load(spriteUrls)
+      }
+
       if (cancelled) {
         app.destroy(true)
         return

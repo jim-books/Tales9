@@ -1,0 +1,170 @@
+import { describe, it, expect } from 'vitest'
+import { spriteRegistry, getAllSpriteUrls } from '../pixi/SpriteAnimDef'
+import { AnimStateMachine, orientationForEdge } from '../pixi/FrameAnimPlayer'
+
+describe('spriteRegistry', () => {
+  it('has an entry for apple character', () => {
+    expect(spriteRegistry.get('apple')).toBeDefined()
+  })
+
+  it('returns undefined for unregistered characters', () => {
+    expect(spriteRegistry.get('pineapple')).toBeUndefined()
+    expect(spriteRegistry.get('peach')).toBeUndefined()
+    expect(spriteRegistry.get('coffee_bean')).toBeUndefined()
+  })
+
+  it('apple fall frameset has 10 frames', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(def.fall.frames).toHaveLength(10)
+  })
+
+  it('apple walk frameset has 5 frames', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(def.walk.frames).toHaveLength(5)
+  })
+
+  it('apple fall frames follow the /sprites/ path convention', () => {
+    const def = spriteRegistry.get('apple')!
+    for (const url of def.fall.frames) {
+      expect(url).toMatch(/^\/sprites\/apple-tart\/fall\/Apple8bitFallSep\d+\.png$/)
+    }
+  })
+
+  it('apple walk frames follow the /sprites/ path convention', () => {
+    const def = spriteRegistry.get('apple')!
+    for (const url of def.walk.frames) {
+      expect(url).toMatch(/^\/sprites\/apple-tart\/walk\/Apple8bitWalkSep\d+\.png$/)
+    }
+  })
+
+  it('apple fall loops is 2', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(def.fall.loops).toBe(2)
+  })
+
+  it('apple walk loops is -1 (infinite)', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(def.walk.loops).toBe(-1)
+  })
+
+  it('apple has a positive scale', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(def.scale).toBeGreaterThan(0)
+  })
+})
+
+describe('getAllSpriteUrls', () => {
+  it('returns 15 URLs (10 fall + 5 walk) for the current registry', () => {
+    expect(getAllSpriteUrls()).toHaveLength(15)
+  })
+
+  it('returns unique URLs', () => {
+    const urls = getAllSpriteUrls()
+    expect(new Set(urls).size).toBe(urls.length)
+  })
+
+  it('all returned URLs start with /sprites/', () => {
+    for (const url of getAllSpriteUrls()) {
+      expect(url).toMatch(/^\/sprites\//)
+    }
+  })
+
+  it('includes all 10 fall frame paths', () => {
+    const urls = getAllSpriteUrls()
+    for (let i = 1; i <= 10; i++) {
+      expect(urls).toContain(`/sprites/apple-tart/fall/Apple8bitFallSep${i}.png`)
+    }
+  })
+
+  it('includes all 5 walk frame paths', () => {
+    const urls = getAllSpriteUrls()
+    for (let i = 1; i <= 5; i++) {
+      expect(urls).toContain(`/sprites/apple-tart/walk/Apple8bitWalkSep${i}.png`)
+    }
+  })
+})
+
+describe('AnimStateMachine', () => {
+  it('starts in FALL_ANIM phase with 0 loops completed', () => {
+    const sm = new AnimStateMachine()
+    expect(sm.phase).toBe('FALL_ANIM')
+    expect(sm.loopsCompleted).toBe(0)
+    expect(sm.readyToWalk).toBe(false)
+  })
+
+  it('onLoop increments loopsCompleted', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop()
+    expect(sm.loopsCompleted).toBe(1)
+  })
+
+  it('two onLoop calls in FALL_ANIM do not yet transition (no physics landed)', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop()
+    sm.onLoop()
+    // Still in FALL_ANIM until physics lands
+    expect(sm.phase).toBe('FALL_ANIM')
+    expect(sm.readyToWalk).toBe(false)
+  })
+
+  it('onPhysicsLanded before 2 loops transitions to FALL_WAIT', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop()        // 1 loop
+    sm.onPhysicsLanded()
+    expect(sm.phase).toBe('FALL_WAIT')
+    expect(sm.readyToWalk).toBe(false)
+  })
+
+  it('onPhysicsLanded after 2+ loops transitions directly to WALK', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop()
+    sm.onLoop()
+    sm.onPhysicsLanded()
+    expect(sm.phase).toBe('WALK')
+    expect(sm.readyToWalk).toBe(true)
+  })
+
+  it('second onLoop in FALL_WAIT transitions to WALK', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop()           // loop 1 → still FALL_ANIM
+    sm.onPhysicsLanded()  // → FALL_WAIT
+    sm.onLoop()           // loop 2 → WALK
+    expect(sm.phase).toBe('WALK')
+    expect(sm.readyToWalk).toBe(true)
+  })
+
+  it('phase does not regress from WALK back to FALL_ANIM', () => {
+    const sm = new AnimStateMachine()
+    sm.onLoop(); sm.onLoop(); sm.onPhysicsLanded()
+    expect(sm.phase).toBe('WALK')
+    sm.onLoop()
+    sm.onPhysicsLanded()
+    expect(sm.phase).toBe('WALK')
+  })
+})
+
+describe('orientationForEdge', () => {
+  it('bottom edge: no flip, no rotation', () => {
+    const o = orientationForEdge('bottom')
+    expect(o.scaleX).toBe(1)
+    expect(o.rotation).toBe(0)
+  })
+
+  it('top edge: flip x, no rotation', () => {
+    const o = orientationForEdge('top')
+    expect(o.scaleX).toBe(-1)
+    expect(o.rotation).toBe(0)
+  })
+
+  it('right edge: no flip, -π/2 rotation', () => {
+    const o = orientationForEdge('right')
+    expect(o.scaleX).toBe(1)
+    expect(o.rotation).toBeCloseTo(-Math.PI / 2)
+  })
+
+  it('left edge: no flip, +π/2 rotation', () => {
+    const o = orientationForEdge('left')
+    expect(o.scaleX).toBe(1)
+    expect(o.rotation).toBeCloseTo(Math.PI / 2)
+  })
+})
