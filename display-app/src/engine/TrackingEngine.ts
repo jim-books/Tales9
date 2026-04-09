@@ -12,7 +12,7 @@ import { CalibrationMapper } from './CalibrationMapper'
  */
 
 /** Maximum distance (in raw input units) for three points to be grouped as one coaster */
-const CLUSTER_RADIUS = 0.08 // normalised units
+const CLUSTER_RADIUS = 0.15 // normalised units
 
 /** Tolerance for geometric signature matching (ratio comparison) */
 const SIGNATURE_TOLERANCE = 0.12
