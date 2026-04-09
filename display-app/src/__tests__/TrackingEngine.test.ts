@@ -23,6 +23,24 @@ function makeAsymmetricCoaster(cx: number, cy: number): Point[] {
   ]
 }
 
+/** Captured from debug panel: should map to coaster-4 */
+const DEBUG_CLUSTER_1: Point[] = [
+  { x: 0.372, y: 0.288 },
+  { x: 0.405, y: 0.377 },
+  { x: 0.334, y: 0.375 },
+]
+
+/** Captured from debug panel: should map to coaster-1 */
+const DEBUG_CLUSTER_2: Point[] = [
+  { x: 0.613, y: 0.581 },
+  { x: 0.684, y: 0.651 },
+  { x: 0.586, y: 0.681 },
+]
+
+function jitter(points: Point[], dx: number, dy: number): Point[] {
+  return points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
+}
+
 describe('TrackingEngine', () => {
   it('detects a single coaster from three clustered points', () => {
     const engine = new TrackingEngine(mapper)
@@ -38,6 +56,29 @@ describe('TrackingEngine', () => {
     const first = engine.processFrame(pts)
     const second = engine.processFrame(pts)
     expect(first[0].id).toBe(second[0].id)
+  })
+
+  it('maps calibrated signatures to known coaster IDs', () => {
+    const engine = new TrackingEngine(mapper)
+    const result = engine.processFrame([...DEBUG_CLUSTER_1, ...DEBUG_CLUSTER_2])
+    const ids = result.map((c) => c.id)
+
+    expect(ids).toContain('coaster-4')
+    expect(ids).toContain('coaster-1')
+  })
+
+  it('keeps known coaster IDs stable with small touch jitter', () => {
+    const engine = new TrackingEngine(mapper)
+    engine.processFrame([...DEBUG_CLUSTER_1, ...DEBUG_CLUSTER_2])
+
+    const frame2 = engine.processFrame([
+      ...jitter(DEBUG_CLUSTER_2, 0.001, -0.001),
+      ...jitter(DEBUG_CLUSTER_1, -0.001, 0.001),
+    ])
+    const ids = frame2.filter((c) => c.active).map((c) => c.id)
+
+    expect(ids).toContain('coaster-4')
+    expect(ids).toContain('coaster-1')
   })
 
   it('detects two distinct coasters simultaneously', () => {

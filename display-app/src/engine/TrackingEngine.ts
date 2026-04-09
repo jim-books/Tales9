@@ -12,10 +12,12 @@ import { CalibrationMapper } from './CalibrationMapper'
  */
 
 /** Maximum distance (in raw input units) for three points to be grouped as one coaster */
-const CLUSTER_RADIUS = 0.08 // normalised units
+const CLUSTER_RADIUS = 0.15 // normalised units
 
 /** Tolerance for geometric signature matching (ratio comparison) */
 const SIGNATURE_TOLERANCE = 0.12
+/** Tighter tolerance for mapping to known physical coaster IDs */
+const KNOWN_SIGNATURE_TOLERANCE = 0.06
 
 /** How long (ms) a coaster must be absent before it's considered removed */
 export const REMOVAL_DEBOUNCE_MS = 12_000
@@ -48,6 +50,21 @@ export interface FrameDiagnosis {
   rawTouchPoints: Point[]
   clusters: ClusterDiagnosis[]
 }
+
+interface KnownCoasterSignature {
+  id: string
+  ratio: [number, number, number]
+}
+
+/**
+ * Calibrated signatures for known physical coasters.
+ * These ratios come from verified debug captures and let us bind
+ * geometric fingerprints to stable external IDs used by assignment events.
+ */
+const KNOWN_COASTER_SIGNATURES: KnownCoasterSignature[] = [
+  { id: 'coaster-1', ratio: [0.978, 0.979, 1.0] },
+  { id: 'coaster-4', ratio: [0.752, 0.999, 1.0] },
+]
 
 /** Compute the three inter-point distance ratios that define a coaster's signature */
 function geometricSignature(pts: CoasterTouchSignature): [number, number, number] {
@@ -94,6 +111,7 @@ export class TrackingEngine {
    */
   processFrame(rawPoints: Point[], now: number = Date.now()): TrackedCoaster[] {
     const clusters = this.clusterPoints(rawPoints)
+    const matchedThisFrame = new Set<string>()
 
     // Mark all known as potentially absent
     for (const coaster of this.tracked.values()) {
@@ -102,22 +120,34 @@ export class TrackingEngine {
 
     for (const cluster of clusters) {
       const sig = geometricSignature(cluster)
-      const existing = this.findMatch(sig)
+      const existing = this.findMatch(sig, matchedThisFrame)
 
       if (existing) {
         existing.signature = cluster
         existing.centroid = this.mapper.centroidOf(cluster)
         existing.lastSeenAt = now
         existing.active = true
+        matchedThisFrame.add(existing.id)
       } else {
-        const id = `coaster-${this.nextId++}`
-        this.tracked.set(id, {
-          id,
-          signature: cluster,
-          centroid: this.mapper.centroidOf(cluster),
-          lastSeenAt: now,
-          active: true,
-        })
+        const known = this.findKnownCoaster(sig)
+        const id = known?.id ?? this.allocateDynamicId()
+        const tracked = this.tracked.get(id)
+
+        if (tracked) {
+          tracked.signature = cluster
+          tracked.centroid = this.mapper.centroidOf(cluster)
+          tracked.lastSeenAt = now
+          tracked.active = true
+        } else {
+          this.tracked.set(id, {
+            id,
+            signature: cluster,
+            centroid: this.mapper.centroidOf(cluster),
+            lastSeenAt: now,
+            active: true,
+          })
+        }
+        matchedThisFrame.add(id)
       }
     }
 
@@ -180,13 +210,50 @@ export class TrackingEngine {
     return clusters
   }
 
-  private findMatch(sig: [number, number, number]): TrackedCoaster | undefined {
+  private findMatch(
+    sig: [number, number, number],
+    matchedThisFrame: Set<string>,
+  ): TrackedCoaster | undefined {
+    let best: { coaster: TrackedCoaster; delta: number } | undefined
+
     for (const coaster of this.tracked.values()) {
-      if (signaturesMatch(sig, geometricSignature(coaster.signature))) {
-        return coaster
+      if (matchedThisFrame.has(coaster.id)) {
+        continue
+      }
+
+      const delta = signatureDelta(sig, geometricSignature(coaster.signature))
+      if (delta < SIGNATURE_TOLERANCE && (!best || delta < best.delta)) {
+        best = { coaster, delta }
       }
     }
+
+    return best?.coaster
+  }
+
+  private findKnownCoaster(sig: [number, number, number]): KnownCoasterSignature | undefined {
+    let best: { known: KnownCoasterSignature; delta: number } | undefined
+
+    for (const known of KNOWN_COASTER_SIGNATURES) {
+      const delta = signatureDelta(sig, known.ratio)
+      if (!best || delta < best.delta) {
+        best = { known, delta }
+      }
+    }
+
+    if (best && best.delta < KNOWN_SIGNATURE_TOLERANCE) {
+      return best.known
+    }
+
     return undefined
+  }
+
+  private allocateDynamicId(): string {
+    const reserved = new Set(KNOWN_COASTER_SIGNATURES.map((k) => k.id))
+    let id = `coaster-${this.nextId++}`
+    while (this.tracked.has(id) || reserved.has(id)) {
+      id = `coaster-${this.nextId++}`
+    }
+    return id
   }
 
   private getClosestTypes(sig: [number, number, number], limit = 3): ClusterTypeMatch[] {
