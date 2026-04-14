@@ -7,10 +7,20 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 ## Session: 2026-04-15
 
 ### Completed
-- [x] `npm test` rerun clean after minimal panel-touch fix updates (`87/87` passing; existing jsdom canvas warning remains pre-existing)
+- [x] `npm run build` rerun clean after moving coaster input off the app root and broadening panel press fallbacks (`tsc -b && vite build`; existing >500 kB chunk warning remains pre-existing)
+- [x] `npm test` rerun clean after panel interaction routing + shared press fallback updates (`87/87` passing; existing jsdom canvas warning remains pre-existing)
+- [x] `display-app/src/screens/GamePortalScreen.tsx` — switched game-launch cards and back navigation to the shared press helper so the in-panel game portal remains usable under multi-touch conditions
+- [x] `display-app/src/screens/OrderStatusPanel.tsx` — switched orders-panel navigation actions to the shared press helper so empty-state and back navigation remain touchable with coasters present
+- [x] `display-app/src/screens/QuizFlow.tsx` — moved quiz answer/back/result actions onto the shared press helper so the full quiz flow no longer depends on synthesized `click`
+- [x] `display-app/src/screens/DrinkDetailModal.tsx` — switched detail-view back/order actions to the shared press helper so drink actions still fire when coaster touches are held on the table
+- [x] `display-app/src/screens/AboutScreen.tsx` — switched the back action to the shared press helper so About remains navigable under persistent coaster touches
+- [x] `display-app/src/screens/HomeScreen.tsx` — switched home-card navigation to the shared press helper so panel entry points no longer rely on synthesized `click`
+- [x] `display-app/src/screens/usePressAction.ts` — added a shared pointer-press helper that falls back from unreliable multi-touch `click` synthesis while suppressing duplicate click activation
+- [x] `display-app/src/components/UserNode.tsx` — expanded panel touch isolation: wrapper uses `pointerEvents: auto` + touch `stopPropagation`, and the inner panel surface still stops touch bubbling so UI gestures do not feed root-level tracking listeners
+- [x] `display-app/src/App.tsx` — moved `InputAdapter` attachment from the top-level app root to the Pixi common-space surface, preventing panel touches from entering coaster tracking through the root bubble path
+- [x] `display-app/src/pixi/PixiStage.tsx` — exposed the Pixi surface wrapper via `onTrackingSurfaceReady()` so coaster input can be attached to the common-space layer instead of the app root
 - [x] `display-app/src/screens/MenuScreen.tsx` — added pointer-press fallback (`onPointerUp`) for category/details/order actions with short click-suppression window to prevent double-fire while keeping keyboard/mouse `onClick` support
 - [x] `display-app/src/screens/screens.css` — hardened panel scrolling for Android WebView by adding `min-height: 0` and `touch-action: pan-y` on `.screen-body`
-- [x] `display-app/src/components/UserNode.tsx` — isolated expanded-panel touch gestures from root coaster tracking by stopping `touchstart/move/end/cancel` propagation on the panel interaction surface
 - [x] `npm test -- src/__tests__/` rerun clean after per-node game popup refactor (`87/87` passing; existing jsdom canvas warning remains pre-existing)
 - [x] `display-app/src/__tests__/GameOverlay.test.tsx` — added focused coverage ensuring per-node game popups render notifications for everyone but actions only for the chosen user
 - [x] `display-app/src/screens/GameOverlay.tsx` — replaced center common-space game card with per-user popups rendered next to each node; only the chosen user receives action buttons while others see notification-only cards
@@ -94,12 +104,14 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 ✓ UserNode.test.tsx            11 tests
 ✓ SpriteRegistry.test.ts       25 tests
 ✓ drinkMenuMedia.test.ts        1 test
-Total: 85/85
+✓ GameOverlay.test.tsx          2 tests
+Total: 87/87
 ```
 
 - [x] `npm run build` clean (`tsc -b && vite build`)
 
 ### Failed Attempts
+- Stopping touch propagation from the panel alone was not sufficient while coaster tracking was still attached to the app root; moving `InputAdapter` onto the Pixi common-space surface was needed to truly separate UI touches from coaster input.
 - Tried to run an automated browser smoke test against `http://127.0.0.1:4173` via browser-use subagent for the 1/2-coaster interaction scenario, but it was unavailable in this environment due regional model restrictions; left a manual on-device QA checklist to execute on hardware.
 - First `GameOverlay` test used exact-text lookups for `GREEN` / `ORANGE`, but the popup copy embeds those labels inside longer strings; relaxed the matcher to regex instead of treating the UI as broken.
 - Full DOM-level pointer simulation for `UserNode` remained too brittle in Vitest/jsdom, so the regression test was reduced to the extracted gesture classifier that contains the actual tap-vs-drag decision logic.

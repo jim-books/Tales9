@@ -38,8 +38,8 @@ function MainView(): JSX.Element {
     rawTouchPoints: [],
     clusters: [],
   })
+  const [trackingSurface, setTrackingSurface] = useState<HTMLDivElement | null>(null)
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
@@ -100,15 +100,15 @@ function MainView(): JSX.Element {
       }
     })
 
-    if (containerRef.current) {
-      adapter.attach(containerRef.current)
+    if (trackingSurface) {
+      adapter.attach(trackingSurface)
     }
 
     return () => {
       adapter.detach()
       dispatcherRef.current = null
     }
-  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster])
+  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster, trackingSurface])
 
   // Toggle debug panel with 'D' key
   useEffect(() => {
@@ -253,7 +253,6 @@ function MainView(): JSX.Element {
 
   return (
     <div
-      ref={containerRef}
       style={{
         position: 'fixed',
         top: 0,
@@ -264,7 +263,7 @@ function MainView(): JSX.Element {
       }}
     >
       {/* Layer 0: PixiJS canvas (standby ambient + coaster animations + game layer) */}
-      <PixiStage />
+      <PixiStage onTrackingSurfaceReady={setTrackingSurface} />
 
       {/* Layer 1: Game result overlay (shown after arrow/crown animation completes) */}
       <GameOverlay />

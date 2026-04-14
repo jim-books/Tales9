@@ -12,6 +12,10 @@ import { ProximityBattle } from './ProximityBattle'
 
 const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
 
+interface PixiStageProps {
+  onTrackingSurfaceReady?: (element: HTMLDivElement | null) => void
+}
+
 /**
  * PixiStage
  *
@@ -19,7 +23,7 @@ const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger
  * React StrictMode-safe via the `cancelled` flag pattern.
  * Wires Zustand coaster state to CoasterAnimation + IngredientSprite instances.
  */
-export function PixiStage(): JSX.Element {
+export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const appRef = useRef<Application | null>(null)
   const standbyRef = useRef<StandbyLayer | null>(null)
@@ -33,6 +37,11 @@ export function PixiStage(): JSX.Element {
     x: number
     y: number
   }>())
+
+  useEffect(() => {
+    onTrackingSurfaceReady?.(containerRef.current)
+    return () => onTrackingSurfaceReady?.(null)
+  }, [onTrackingSurfaceReady])
 
   // ─── Init PixiJS once ────────────────────────────────────────────────────────
   useEffect(() => {

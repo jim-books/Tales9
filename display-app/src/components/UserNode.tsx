@@ -496,8 +496,12 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             ...panelAnchorStyle,
             ...panelWrapperSize,
             zIndex: 1,
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           }}
+          onTouchStart={stopPanelTouchPropagation}
+          onTouchMove={stopPanelTouchPropagation}
+          onTouchEnd={stopPanelTouchPropagation}
+          onTouchCancel={stopPanelTouchPropagation}
         >
           <div
             style={{
