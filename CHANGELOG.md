@@ -7,6 +7,10 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 ## Session: 2026-04-15
 
 ### Completed
+- [x] `npm test` rerun clean after minimal panel-touch fix updates (`87/87` passing; existing jsdom canvas warning remains pre-existing)
+- [x] `display-app/src/screens/MenuScreen.tsx` — added pointer-press fallback (`onPointerUp`) for category/details/order actions with short click-suppression window to prevent double-fire while keeping keyboard/mouse `onClick` support
+- [x] `display-app/src/screens/screens.css` — hardened panel scrolling for Android WebView by adding `min-height: 0` and `touch-action: pan-y` on `.screen-body`
+- [x] `display-app/src/components/UserNode.tsx` — isolated expanded-panel touch gestures from root coaster tracking by stopping `touchstart/move/end/cancel` propagation on the panel interaction surface
 - [x] `npm test -- src/__tests__/` rerun clean after per-node game popup refactor (`87/87` passing; existing jsdom canvas warning remains pre-existing)
 - [x] `display-app/src/__tests__/GameOverlay.test.tsx` — added focused coverage ensuring per-node game popups render notifications for everyone but actions only for the chosen user
 - [x] `display-app/src/screens/GameOverlay.tsx` — replaced center common-space game card with per-user popups rendered next to each node; only the chosen user receives action buttons while others see notification-only cards
@@ -96,6 +100,7 @@ Total: 85/85
 - [x] `npm run build` clean (`tsc -b && vite build`)
 
 ### Failed Attempts
+- Tried to run an automated browser smoke test against `http://127.0.0.1:4173` via browser-use subagent for the 1/2-coaster interaction scenario, but it was unavailable in this environment due regional model restrictions; left a manual on-device QA checklist to execute on hardware.
 - First `GameOverlay` test used exact-text lookups for `GREEN` / `ORANGE`, but the popup copy embeds those labels inside longer strings; relaxed the matcher to regex instead of treating the UI as broken.
 - Full DOM-level pointer simulation for `UserNode` remained too brittle in Vitest/jsdom, so the regression test was reduced to the extracted gesture classifier that contains the actual tap-vs-drag decision logic.
 - The original `4px` drag threshold was unrealistically tight for the IR overlay and likely treated tap jitter as drag; the fix was widened to a more touch-tolerant `16px` classifier.
