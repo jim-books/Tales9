@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
 import './screens.css'
 
 interface MenuScreenProps {
@@ -20,6 +21,86 @@ const CATEGORY_LABELS: Record<FilterCategory, string> = {
 }
 
 const FILTER_OPTIONS: FilterCategory[] = ['ALL', 'CLASSICS', 'COFFEE_BASED', 'DESSERT_INSPIRED']
+
+interface MenuDrinkMediaProps {
+  drinkId: string
+  drinkName: string
+  fallbackGradient: string
+}
+
+function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMediaProps): JSX.Element {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [inView, setInView] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+
+  const mediaSrc = getDrinkMenuMedia(drinkId)
+  const canPlayVideo = Boolean(mediaSrc) && inView && !loadError
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '100px 0px', threshold: 0.1 },
+    )
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!canPlayVideo || !videoRef.current) return
+    void videoRef.current.play().catch(() => {
+      setLoadError(true)
+    })
+  }, [canPlayVideo])
+
+  return (
+    <div
+      ref={containerRef}
+      className="drink-card__media"
+      aria-label={`${drinkName} animation`}
+    >
+      {canPlayVideo ? (
+        <video
+          ref={videoRef}
+          className="drink-card__video"
+          src={mediaSrc ?? undefined}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onError={() => setLoadError(true)}
+        />
+      ) : (
+        <div
+          className="drink-card__image-placeholder"
+          style={{ background: fallbackGradient }}
+        />
+      )}
+      <div className="drink-card__media-overlay">
+        {loadError
+          ? 'Animation unavailable'
+          : canPlayVideo
+            ? 'Playing animation'
+            : inView
+              ? 'Loading animation'
+              : 'Scroll to load animation'}
+      </div>
+    </div>
+  )
+}
 
 export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuScreenProps): JSX.Element {
   const [query, setQuery] = useState('')
@@ -72,14 +153,11 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuS
 
         {filtered.map((drink) => (
           <div key={drink.id} className="drink-card">
-            {drink.imageUrl ? (
-              <img className="drink-card__image" src={drink.imageUrl} alt={drink.name} />
-            ) : (
-              <div
-                className="drink-card__image-placeholder"
-                style={{ background: `linear-gradient(135deg, ${drink.colorPalette[0]}, ${drink.colorPalette[1]})` }}
-              />
-            )}
+            <MenuDrinkMedia
+              drinkId={drink.id}
+              drinkName={drink.name}
+              fallbackGradient={`linear-gradient(135deg, ${drink.colorPalette[0]}, ${drink.colorPalette[1]})`}
+            />
             <div className="drink-card__body">
               <span className="category-pill">{CATEGORY_LABELS[drink.category]}</span>
               <div className="drink-card__name">{drink.name}</div>

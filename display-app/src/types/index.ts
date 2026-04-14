@@ -5,6 +5,7 @@ export type DrinkCategory = 'CLASSICS' | 'COFFEE_BASED' | 'DESSERT_INSPIRED'
 export type OrderStatus = 'pending' | 'preparing' | 'on_the_way' | 'arrived'
 export type GameType = 'truth_or_dare' | 'kings_game'
 export type UserColor = 'blue' | 'green' | 'orange' | 'purple'
+export type UserEdge = 'top' | 'right' | 'bottom' | 'left'
 export type CoasterDetectionState = 'preview' | 'confirmed' | 'inactive'
 
 export interface DrinkProfile {
@@ -46,6 +47,12 @@ export interface UserNode {
   ownerIndex: number
   color: UserColor
   position: Point
+  /** Fixed spawn-derived edge representing the node owner's side */
+  ownerEdge: UserEdge
+  /** Current inferred viewer-facing edge (dynamic handoff target) */
+  viewEdge: UserEdge
+  /** Locks orientation while panel is open to keep content readable */
+  lockedEdge: UserEdge | null
   panelOpen: boolean
 }
 

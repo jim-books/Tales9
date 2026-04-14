@@ -31,6 +31,17 @@ describe('useAppStore', () => {
     expect(nodes.every((n) => !n.panelOpen)).toBe(true)
   })
 
+  it('user nodes start with owner/view edge set from spawn edge', () => {
+    useAppStore.getState().startSession(4)
+    const nodes = useAppStore.getState().userNodes
+    expect(nodes[0].ownerEdge).toBe('bottom')
+    expect(nodes[1].ownerEdge).toBe('bottom')
+    expect(nodes[2].ownerEdge).toBe('top')
+    expect(nodes[3].ownerEdge).toBe('top')
+    expect(nodes.every((n) => n.viewEdge === n.ownerEdge)).toBe(true)
+    expect(nodes.every((n) => n.lockedEdge === null)).toBe(true)
+  })
+
   it('togglePanel opens and then closes a panel', () => {
     useAppStore.getState().startSession(2)
     const id = useAppStore.getState().userNodes[0].id
@@ -45,6 +56,23 @@ describe('useAppStore', () => {
     const id = useAppStore.getState().userNodes[0].id
     useAppStore.getState().setUserNodePosition(id, { x: 0.5, y: 0.5 })
     expect(useAppStore.getState().userNodes[0].position).toEqual({ x: 0.5, y: 0.5 })
+  })
+
+  it('setUserNodeViewEdge updates current viewing edge', () => {
+    useAppStore.getState().startSession(1)
+    const id = useAppStore.getState().userNodes[0].id
+    useAppStore.getState().setUserNodeViewEdge(id, 'left')
+    expect(useAppStore.getState().userNodes[0].viewEdge).toBe('left')
+    expect(useAppStore.getState().userNodes[0].ownerEdge).toBe('bottom')
+  })
+
+  it('locks and unlocks orientation edge explicitly', () => {
+    useAppStore.getState().startSession(1)
+    const id = useAppStore.getState().userNodes[0].id
+    useAppStore.getState().lockUserNodeOrientation(id, 'right')
+    expect(useAppStore.getState().userNodes[0].lockedEdge).toBe('right')
+    useAppStore.getState().unlockUserNodeOrientation(id)
+    expect(useAppStore.getState().userNodes[0].lockedEdge).toBeNull()
   })
 
   it('endSession resets all state', () => {

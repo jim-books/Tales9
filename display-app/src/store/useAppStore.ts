@@ -1,5 +1,15 @@
 import { create } from 'zustand'
-import type { UserNode, Coaster, Order, GameState, GameType, UserColor, Point, OrderStatus } from '../types'
+import type {
+  UserNode,
+  Coaster,
+  Order,
+  GameState,
+  GameType,
+  UserColor,
+  UserEdge,
+  Point,
+  OrderStatus,
+} from '../types'
 
 const USER_COLORS: UserColor[] = ['blue', 'green', 'orange', 'purple']
 
@@ -10,6 +20,17 @@ const SPAWN_POSITIONS: Point[] = [
   { x: 0.25, y: 0.12 }, // top-left (user 2)
   { x: 0.75, y: 0.12 }, // top-right (user 3)
 ]
+
+function nearestEdgeFromPosition(position: Point): UserEdge {
+  const distances: Array<[UserEdge, number]> = [
+    ['top', position.y],
+    ['right', 1 - position.x],
+    ['bottom', 1 - position.y],
+    ['left', position.x],
+  ]
+  distances.sort((a, b) => a[1] - b[1])
+  return distances[0][0]
+}
 
 interface AppState {
   // ─── Session ─────────────────────────────────────────────────────────────
@@ -31,6 +52,9 @@ interface AppState {
   endSession: () => void
 
   setUserNodePosition: (nodeId: string, position: Point) => void
+  setUserNodeViewEdge: (nodeId: string, edge: UserEdge) => void
+  lockUserNodeOrientation: (nodeId: string, edge: UserEdge) => void
+  unlockUserNodeOrientation: (nodeId: string) => void
   togglePanel: (nodeId: string) => void
 
   upsertCoaster: (
@@ -64,10 +88,13 @@ export const useAppStore = create<AppState>((set) => ({
       sessionActive: true,
       userCount,
       userNodes: Array.from({ length: userCount }, (_, i) => ({
+        position: SPAWN_POSITIONS[i],
+        ownerEdge: nearestEdgeFromPosition(SPAWN_POSITIONS[i]),
+        viewEdge: nearestEdgeFromPosition(SPAWN_POSITIONS[i]),
+        lockedEdge: null,
         id: `user-${i}`,
         ownerIndex: i,
         color: USER_COLORS[i],
-        position: SPAWN_POSITIONS[i],
         panelOpen: false,
       })),
       orders: [],
@@ -87,6 +114,25 @@ export const useAppStore = create<AppState>((set) => ({
   setUserNodePosition: (nodeId, position) =>
     set((s) => ({
       userNodes: s.userNodes.map((n) => (n.id === nodeId ? { ...n, position } : n)),
+    })),
+
+  setUserNodeViewEdge: (nodeId, edge) =>
+    set((s) => ({
+      userNodes: s.userNodes.map((n) => (n.id === nodeId ? { ...n, viewEdge: edge } : n)),
+    })),
+
+  lockUserNodeOrientation: (nodeId, edge) =>
+    set((s) => ({
+      userNodes: s.userNodes.map((n) =>
+        n.id === nodeId ? { ...n, lockedEdge: edge } : n,
+      ),
+    })),
+
+  unlockUserNodeOrientation: (nodeId) =>
+    set((s) => ({
+      userNodes: s.userNodes.map((n) =>
+        n.id === nodeId ? { ...n, lockedEdge: null } : n,
+      ),
     })),
 
   togglePanel: (nodeId) =>

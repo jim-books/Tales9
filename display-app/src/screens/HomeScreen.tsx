@@ -34,6 +34,19 @@ const CARDS = [
     ),
   },
   {
+    view: 'game' as const,
+    title: 'Game',
+    sub: 'Start Truth or Dare or King\'s Game',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 7h10a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3z" />
+        <path d="M8 12h4M10 10v4" />
+        <circle cx="15.5" cy="11" r="1" />
+        <circle cx="17.5" cy="13" r="1" />
+      </svg>
+    ),
+  },
+  {
     view: 'menu' as const,
     title: 'Menu',
     sub: 'Browse our full selection of drinks',

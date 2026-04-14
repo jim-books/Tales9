@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
-import type { UserNode as UserNodeType, Order, Point } from '../types'
+import type { UserNode as UserNodeType, Order, Point, UserEdge } from '../types'
 import type { PanelScreen } from './PanelScreen'
 import { HomeScreen } from '../screens/HomeScreen'
 import { AboutScreen } from '../screens/AboutScreen'
@@ -8,6 +8,7 @@ import { MenuScreen } from '../screens/MenuScreen'
 import { DrinkDetailModal } from '../screens/DrinkDetailModal'
 import { QuizFlow } from '../screens/QuizFlow'
 import { OrderStatusPanel } from '../screens/OrderStatusPanel'
+import { GamePortalScreen } from '../screens/GamePortalScreen'
 
 interface UserNodeProps {
   node: UserNodeType
@@ -15,17 +16,157 @@ interface UserNodeProps {
   orders: Order[]
 }
 
-/** Compute rotation angle (degrees) so the panel opens toward the canvas center */
-function computeRotation(pos: Point, canvasSize: number): number {
-  const cx = canvasSize / 2
-  const cy = canvasSize / 2
-  const angleRad = Math.atan2(cy - pos.y * canvasSize, cx - pos.x * canvasSize)
-  return angleRad * (180 / Math.PI)
-}
-
 const MIN_POS = 0.05
 const MAX_POS = 0.95
 const TAP_SLOP_PX = 16
+const EDGE_TIE_THRESHOLD = 0.03
+const APPROACH_INTENT_MIN_PX = 6
+const PANEL_WIDTH = 360
+const PANEL_HEIGHT = 480
+const PANEL_SCALE = 0.75
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+function clampPosition(pos: Point): Point {
+  return {
+    x: clamp(pos.x, MIN_POS, MAX_POS),
+    y: clamp(pos.y, MIN_POS, MAX_POS),
+  }
+}
+
+export function rotationForEdge(edge: UserEdge): number {
+  switch (edge) {
+    case 'bottom':
+      return 0
+    case 'right':
+      return -90
+    case 'top':
+      return 180
+    case 'left':
+      return 90
+  }
+}
+
+export function nearestEdgeResult(
+  position: Point,
+  tieThreshold = EDGE_TIE_THRESHOLD,
+): { edge: UserEdge; ambiguous: boolean } {
+  const distances: Array<[UserEdge, number]> = [
+    ['top', position.y],
+    ['right', 1 - position.x],
+    ['bottom', 1 - position.y],
+    ['left', position.x],
+  ]
+  distances.sort((a, b) => a[1] - b[1])
+  const [bestEdge, bestDistance] = distances[0]
+  const [, secondDistance] = distances[1]
+  return {
+    edge: bestEdge,
+    ambiguous: secondDistance - bestDistance <= tieThreshold,
+  }
+}
+
+export function approachEdgeFromDelta(
+  dx: number,
+  dy: number,
+  minIntentPx = APPROACH_INTENT_MIN_PX,
+): UserEdge | null {
+  if (Math.hypot(dx, dy) < minIntentPx) return null
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx >= 0 ? 'right' : 'left'
+  }
+  return dy >= 0 ? 'bottom' : 'top'
+}
+
+export function resolveViewEdge(
+  position: Point,
+  previousEdge: UserEdge | null,
+  ownerEdge: UserEdge,
+  approachEdge: UserEdge | null,
+): UserEdge {
+  const nearest = nearestEdgeResult(position)
+  if (!nearest.ambiguous) return nearest.edge
+  if (approachEdge) return approachEdge
+  if (previousEdge) return previousEdge
+  return ownerEdge
+}
+
+export function panelAnchorStyleForEdge(edge: UserEdge, positionX = 0.5): React.CSSProperties {
+  switch (edge) {
+    case 'bottom':
+      return positionX <= 0.5
+        ? {
+            left: 'calc(100% + 12px)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }
+        : {
+            right: 'calc(100% + 12px)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }
+    case 'top':
+      return positionX <= 0.5
+        ? {
+            left: 'calc(100% + 12px)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }
+        : {
+            right: 'calc(100% + 12px)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }
+    case 'left':
+      return {
+        left: 'calc(100% + 12px)',
+        top: '50%',
+        transform: 'translateY(-50%)',
+      }
+    case 'right':
+      return {
+        right: 'calc(100% + 12px)',
+        top: '50%',
+        transform: 'translateY(-50%)',
+      }
+  }
+}
+
+function panelTransformOriginForEdge(
+  edge: UserEdge,
+  positionX = 0.5,
+): React.CSSProperties['transformOrigin'] {
+  switch (edge) {
+    case 'bottom':
+      return positionX <= 0.5 ? 'left center' : 'right center'
+    case 'top':
+      return positionX <= 0.5 ? 'left center' : 'right center'
+    case 'left':
+      return 'left center'
+    case 'right':
+      return 'right center'
+  }
+}
+
+export function panelTransformForEdge(edge: UserEdge): string {
+  return `rotate(${rotationForEdge(edge)}deg)`
+}
+
+function panelAnimatedTransform(edge: UserEdge, scale: number): string {
+  return `${panelTransformForEdge(edge)} scale(${scale})`
+}
+
+function panelWrapperSizeForEdge(edge: UserEdge): React.CSSProperties {
+  const scaledWidth = PANEL_WIDTH * PANEL_SCALE
+  const scaledHeight = PANEL_HEIGHT * PANEL_SCALE
+  if (edge === 'left' || edge === 'right') {
+    return { width: scaledHeight, height: scaledWidth }
+  }
+  return { width: scaledWidth, height: scaledHeight }
+}
 
 export function isTapGesture(
   start: Point | null,
@@ -38,14 +179,29 @@ export function isTapGesture(
 }
 
 export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Element {
-  const { togglePanel, setUserNodePosition, addOrder } = useAppStore()
+  const {
+    togglePanel,
+    setUserNodePosition,
+    setUserNodeViewEdge,
+    lockUserNodeOrientation,
+    unlockUserNodeOrientation,
+    addOrder,
+    startGame,
+  } = useAppStore()
   const [screen, setScreen] = useState<PanelScreen>({ view: 'home' })
 
   const didDragRef = useRef(false)
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
   const nodeStartPosRef = useRef<Point | null>(null)
+  const lastPointerRef = useRef<Point | null>(null)
+  const approachEdgeRef = useRef<UserEdge | null>(null)
 
-  const rotation = computeRotation(node.position, canvasSize)
+  const displayEdge = node.lockedEdge ?? node.viewEdge ?? node.ownerEdge
+  const rotation = rotationForEdge(displayEdge)
+  const panelAnchorStyle = panelAnchorStyleForEdge(displayEdge, node.position.x)
+  const panelTransformOrigin = panelTransformOriginForEdge(displayEdge, node.position.x)
+  const panelTransform = panelTransformForEdge(displayEdge)
+  const panelWrapperSize = panelWrapperSizeForEdge(displayEdge)
 
   const left = node.position.x * canvasSize
   const top = node.position.y * canvasSize
@@ -73,6 +229,8 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       didDragRef.current = false
       pointerStartRef.current = { x: e.clientX, y: e.clientY }
       nodeStartPosRef.current = { ...node.position }
+      lastPointerRef.current = { x: e.clientX, y: e.clientY }
+      approachEdgeRef.current = null
       e.stopPropagation()
     },
     [node.position],
@@ -88,14 +246,45 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       if (!didDragRef.current && Math.hypot(dx, dy) < TAP_SLOP_PX) return
 
       didDragRef.current = true
+      const clamped = clampPosition({
+        x: nodeStartPosRef.current.x + dx / canvasSize,
+        y: nodeStartPosRef.current.y + dy / canvasSize,
+      })
+      const previousPointer = lastPointerRef.current
+      if (previousPointer) {
+        const approachEdge = approachEdgeFromDelta(
+          e.clientX - previousPointer.x,
+          e.clientY - previousPointer.y,
+        )
+        if (approachEdge) {
+          approachEdgeRef.current = approachEdge
+        }
+      }
+      lastPointerRef.current = { x: e.clientX, y: e.clientY }
 
-      const newX = Math.max(MIN_POS, Math.min(MAX_POS, nodeStartPosRef.current.x + dx / canvasSize))
-      const newY = Math.max(MIN_POS, Math.min(MAX_POS, nodeStartPosRef.current.y + dy / canvasSize))
-
-      setUserNodePosition(node.id, { x: newX, y: newY })
+      setUserNodePosition(node.id, clamped)
+      if (!node.lockedEdge) {
+        const resolvedEdge = resolveViewEdge(
+          clamped,
+          node.viewEdge,
+          node.ownerEdge,
+          approachEdgeRef.current,
+        )
+        if (resolvedEdge !== node.viewEdge) {
+          setUserNodeViewEdge(node.id, resolvedEdge)
+        }
+      }
       e.stopPropagation()
     },
-    [canvasSize, node.id, setUserNodePosition],
+    [
+      canvasSize,
+      node.id,
+      node.lockedEdge,
+      node.ownerEdge,
+      node.viewEdge,
+      setUserNodePosition,
+      setUserNodeViewEdge,
+    ],
   )
 
   const handlePointerUp = useCallback(
@@ -106,29 +295,78 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         { x: e.clientX, y: e.clientY },
         didDragRef.current,
       )
+      const approachEdge = approachEdgeRef.current
 
       e.currentTarget.releasePointerCapture(e.pointerId)
+      const finalPointerStart = pointerStartRef.current
+      const finalNodeStart = nodeStartPosRef.current
       pointerStartRef.current = null
       nodeStartPosRef.current = null
+      lastPointerRef.current = null
+      approachEdgeRef.current = null
+
+      if (!wasTap && finalPointerStart && finalNodeStart && !node.lockedEdge) {
+        const finalPosition = clampPosition({
+          x: finalNodeStart.x + (e.clientX - finalPointerStart.x) / canvasSize,
+          y: finalNodeStart.y + (e.clientY - finalPointerStart.y) / canvasSize,
+        })
+        const resolvedEdge = resolveViewEdge(
+          finalPosition,
+          node.viewEdge,
+          node.ownerEdge,
+          approachEdge,
+        )
+        if (resolvedEdge !== node.viewEdge) {
+          setUserNodeViewEdge(node.id, resolvedEdge)
+        }
+      }
+
+      didDragRef.current = false
 
       if (!wasTap) {
         e.stopPropagation()
         return
       }
 
-      togglePanel(node.id)
-      if (!node.panelOpen) {
+      const activeEdge = resolveViewEdge(
+        node.position,
+        node.viewEdge,
+        node.ownerEdge,
+        approachEdge,
+      )
+
+      if (node.panelOpen) {
+        togglePanel(node.id)
+        unlockUserNodeOrientation(node.id)
+      } else {
+        setUserNodeViewEdge(node.id, activeEdge)
+        lockUserNodeOrientation(node.id, activeEdge)
+        togglePanel(node.id)
         setScreen({ view: 'home' })
       }
       e.stopPropagation()
     },
-    [node.id, node.panelOpen, togglePanel],
+    [
+      canvasSize,
+      node.id,
+      node.panelOpen,
+      node.position,
+      node.lockedEdge,
+      node.ownerEdge,
+      node.viewEdge,
+      togglePanel,
+      setUserNodeViewEdge,
+      lockUserNodeOrientation,
+      unlockUserNodeOrientation,
+    ],
   )
 
   const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.releasePointerCapture(e.pointerId)
     pointerStartRef.current = null
     nodeStartPosRef.current = null
+    lastPointerRef.current = null
+    approachEdgeRef.current = null
     didDragRef.current = false
     e.stopPropagation()
   }, [])
@@ -152,6 +390,18 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             userColor={node.color}
             onNavigate={navigate}
             onOrder={handleOrder}
+          />
+        )
+      case 'game':
+        return (
+          <GamePortalScreen
+            userColor={node.color}
+            onBack={() => navigate({ view: 'home' })}
+            onStartGame={(type) => {
+              startGame(type)
+              togglePanel(node.id)
+              unlockUserNodeOrientation(node.id)
+            }}
           />
         )
       case 'detail':
@@ -189,14 +439,17 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         position: 'absolute',
         left,
         top,
-        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+        transform: 'translate(-50%, -50%)',
         pointerEvents: 'auto',
         zIndex: node.panelOpen ? 10 : 1,
       }}
+      data-user-edge={displayEdge}
     >
       {/* Drag handle / toggle button */}
       <div
         style={{
+          position: 'relative',
+          zIndex: 2,
           width: 64,
           height: 64,
           borderRadius: '50%',
@@ -219,7 +472,15 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       >
-        {node.ownerIndex + 1}
+        <span
+          style={{
+            display: 'inline-block',
+            transform: `rotate(${rotation}deg)`,
+            transition: 'transform 0.15s ease',
+          }}
+        >
+          {node.ownerIndex + 1}
+        </span>
       </div>
 
       {/* Expanded panel */}
@@ -227,31 +488,39 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         <div
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 12px)',
-            left: '50%',
-            transform: `translateX(-50%) rotate(${-rotation}deg)`,
-            width: 360,
-            height: 480,
-            background: 'var(--color-panel)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 16,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            transformOrigin: 'bottom center',
-            animation: 'panelExpand 0.2s ease-out',
+            ...panelAnchorStyle,
+            ...panelWrapperSize,
+            zIndex: 1,
+            pointerEvents: 'none',
           }}
         >
-          {renderScreen()}
+          <div
+            style={{
+              width: PANEL_WIDTH,
+              height: PANEL_HEIGHT,
+              background: 'var(--color-panel)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 16,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              transform: `${panelTransform} scale(${PANEL_SCALE})`,
+              transformOrigin: panelTransformOrigin,
+              animation: 'panelExpand 0.2s ease-out',
+              pointerEvents: 'auto',
+            }}
+          >
+            {renderScreen()}
+          </div>
         </div>
       )}
 
       <style>{`
         @keyframes panelExpand {
-          from { opacity: 0; transform: translateX(-50%) rotate(${-rotation}deg) scale(0.92); }
-          to   { opacity: 1; transform: translateX(-50%) rotate(${-rotation}deg) scale(1); }
+          from { opacity: 0; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE * 0.92)}; }
+          to   { opacity: 1; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE)}; }
         }
       `}</style>
     </div>
