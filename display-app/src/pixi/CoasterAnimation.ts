@@ -1,6 +1,8 @@
 import { Container, Graphics, type Ticker } from 'pixi.js'
 import type { DrinkProfile } from '../types'
 
+const COASTER_ANIMATION_SCALE = 1.7
+
 /** Convert CSS hex string (#RRGGBB) to PixiJS colour number */
 function hexToNum(hex: string): number {
   return parseInt(hex.replace('#', ''), 16)
@@ -71,39 +73,50 @@ export class CoasterAnimation {
     this.container.destroy({ children: true })
   }
 
+  private scaled(size: number): number {
+    return size * COASTER_ANIMATION_SCALE
+  }
+
   private drawEnergetic(color: number): void {
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2 + this.phase
-      const dist = 60 + 60 * Math.abs(Math.sin(this.phase * 2 + i))
+      const dist = this.scaled(60 + 60 * Math.abs(Math.sin(this.phase * 2 + i)))
       const x = this.cx + Math.cos(angle) * dist
       const y = this.cy + Math.sin(angle) * dist
-      this.g.circle(x, y, 5 + 3 * Math.abs(Math.sin(this.phase + i))).fill({ color, alpha: 0.65 })
+      this.g
+        .circle(x, y, this.scaled(5 + 3 * Math.abs(Math.sin(this.phase + i))))
+        .fill({ color, alpha: 0.65 })
     }
   }
 
   private drawElegant(color: number): void {
     const ringPhase = this.phase % (Math.PI * 2)
-    const radius = 40 + ringPhase * 15
+    const radius = this.scaled(40 + ringPhase * 15)
     const alpha = 0.5 * (1 - ringPhase / (Math.PI * 2))
-    this.g.circle(this.cx, this.cy, radius).stroke({ color, width: 2, alpha })
+    this.g.circle(this.cx, this.cy, radius).stroke({ color, width: this.scaled(2), alpha })
   }
 
   private drawTropical(c0: number, c1: number, c2: number): void {
     const colors = [c0, c1, c2]
     for (let i = 0; i < 3; i++) {
       const offsetPhase = this.phase + (i * Math.PI * 2) / 3
-      const radius = 40 + 30 * Math.abs(Math.sin(offsetPhase))
-      this.g.circle(this.cx, this.cy, radius).stroke({ color: colors[i], width: 2, alpha: 0.45 })
+      const radius = this.scaled(40 + 30 * Math.abs(Math.sin(offsetPhase)))
+      this.g
+        .circle(this.cx, this.cy, radius)
+        .stroke({ color: colors[i], width: this.scaled(2), alpha: 0.45 })
     }
   }
 
   private drawBold(color: number): void {
-    const spokeLen = 50 + 30 * Math.sin(this.phase)
+    const spokeLen = this.scaled(50 + 30 * Math.sin(this.phase))
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2
       const x2 = this.cx + Math.cos(angle) * spokeLen
       const y2 = this.cy + Math.sin(angle) * spokeLen
-      this.g.moveTo(this.cx, this.cy).lineTo(x2, y2).stroke({ color, width: 2, alpha: 0.7 })
+      this.g
+        .moveTo(this.cx, this.cy)
+        .lineTo(x2, y2)
+        .stroke({ color, width: this.scaled(2), alpha: 0.7 })
     }
   }
 }
