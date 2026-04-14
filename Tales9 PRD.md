@@ -324,16 +324,33 @@ The status progression provides transparency and anticipation.
 - The system identifies the coaster by matching this signature
 - Position is computed from the centroid of the three contact points
 
+**Detection Engine Spec:**
+- The tracking system uses a **two-stage visual response**: immediate generic preview first, confirmed drink-specific animation second
+- As soon as a valid 3-point cluster is detected, the table renders a **low-cost generic preview effect** (for example a ring, shimmer, or glow) at the computed centroid
+- This preview must appear fast enough to feel immediate and magical, even before final identity confirmation is complete
+- After preview, the engine performs **template scoring** and a short **temporal stability check** to confirm which known coaster signature has been placed
+- Only after confirmation does the system upgrade the preview into the assigned drink's full animation behavior
+- If the candidate cluster fails confirmation, the preview effect is cancelled or faded out with minimal visual disruption
+- Business state should remain conservative: the visual preview may appear optimistically, but drink-arrival state and coaster-to-drink confirmation should only advance after identity confirmation
+
+**Target Timing:**
+- **0-16ms:** detect candidate cluster and render generic preview at centroid
+- **16-80ms:** run template scoring and temporal confirmation checks
+- **<100ms:** upgrade preview to the confirmed drink-specific effect when a match succeeds
+- **>100ms:** preview may remain visible temporarily, but the system must not advance business state until confirmation succeeds
+
 **Coaster Physical Design:**
 - Each coaster is equipped with an **NFC tag** for identification
 - Each coaster also displays a **printed number** on its surface for visual reference and manual backup
 
 **Visual Response:**
 When a tracked coaster is detected:
+- A low-cost **generic preview** appears immediately at the detected centroid
 - Drink-specific animations appear around the glass
 - Animations may include particle effects, ripples, color themes, or branded content
 - The animation type is determined by the drink profile assigned to that coaster
 - Animations occur in the Common Space, visible to all users at the table
+- If detection is later rejected, the generic preview is withdrawn without committing drink-arrival state
 
 **Drink Removal Detection:**
 When a drink is lifted or removed from the table:
@@ -708,6 +725,10 @@ Computes tracking state from raw input:
 - Movement velocity and direction
 - Enter/exit state transitions
 - Stable placement detection (distinguishing intentional placement from transient touches)
+- Candidate cluster detection for newly placed coasters
+- Template scoring against the known coaster signature set
+- Short confirmation window before committing coaster identity
+- Separation between optimistic preview state and confirmed coaster state
 
 **Responsibility:** Convert raw touch data into meaningful object tracking state.
 
@@ -728,6 +749,7 @@ Converts raw coordinates into display coordinates:
 #### D. Animation Renderer
 
 Uses mapped position and identity to:
+- Render immediate low-cost preview feedback before coaster identity is fully confirmed
 - Place visuals under or around the coaster in the Common Space
 - Trigger drink-specific animation profiles
 - Adjust color themes, particle effects, and visual styles
@@ -784,6 +806,23 @@ Calibration is a **reusable transform** that converts:
 - Display coordinates (pixel positions for rendering animations)
 
 This separation ensures the system can adapt to different display sizes, resolutions, and physical table dimensions.
+
+#### Detection Response Strategy
+
+To balance **magic-like responsiveness**, **accuracy**, and **system performance**, coaster detection follows a staged response model:
+
+- **Stage 1: Candidate Preview**
+  - A valid candidate 3-point cluster immediately produces a lightweight generic preview effect at the centroid
+  - This stage is optimized for speed and visual responsiveness rather than final identity certainty
+
+- **Stage 2: Confirmation**
+  - The engine compares the candidate against the known coaster signature templates and verifies short-term stability across multiple input frames
+  - If confirmed, the preview is upgraded to the correct drink-specific animation
+
+- **Stage 3: Cancellation**
+  - If the candidate does not satisfy confirmation rules, the preview is removed or faded out without updating drink-arrival business state
+
+This strategy ensures the table feels immediate to guests while still protecting the system from false positives and unnecessary heavy rendering work.
 
 ---
 
