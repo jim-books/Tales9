@@ -63,16 +63,20 @@ The Smart Bar Table consists of:
 - **Resolution:** 1900 × 1900 pixels
 - **Active display area:** 598 × 598 mm
 - **Unit dimensions:** 632 × 632 × 60.8 mm (including mounting bracket)
-- Touch-enabled multi-touch display
+- Monitor has no native touch input
+- Infrared touch overlay (same 598 x 598 mm active area as the monitor), supporting over 40 simultaneous touch points, connected to the MOREFINE mini PC via USB cable
 - Designed to accommodate **up to 4 simultaneous users**
 - Each user assigned a unique color identity
 - Protected by ≥3.5 mm high-strength tempered glass surface
 - **Weight:** 17 kg (net)
 
 **System:**
-- Android 8.1 operating system
-- RK3566 quad-core processor
-- 2 GB RAM / 16 GB storage
+- Display panel has no onboard OS (passive display only)
+- Connected via HDMI to a MOREFINE mini PC
+- Infrared touch overlay connects to the MOREFINE mini PC via USB cable
+- Mini PC CPU: Intel(R) Core(TM) i3-M305 @ 1.80GHz
+- Mini PC memory: 16 GB RAM (4800 MT/s)
+- Mini PC OS: Windows 11 Pro
 - Network connectivity via Ethernet and Wi-Fi
 - Operating power ≤65 W
 
@@ -315,7 +319,7 @@ The status progression provides transparency and anticipation.
 **Core Requirement:** For this MVP, coaster tracking must support both **identity** and **position** tracking. This is a foundational capability of the Smart Bar Table experience, not optional background functionality.
 
 **Detection Method:**
-- Each coaster has **3 contact points** that touch the monitor surface
+- Each coaster has **3 contact points** that touch the infrared touch overlay surface
 - The unique ratio of distances between these three points creates a **geometric signature**
 - The system identifies the coaster by matching this signature
 - Position is computed from the centroid of the three contact points
@@ -678,7 +682,7 @@ The coaster tracking system is modular and consists of five major components:
 #### A. Input Adapter
 
 Handles raw input from possible sources:
-- Multi-touch events from the display
+- Multi-touch events from the infrared touch overlay
 - Sensor data streams
 - Camera/object detection feed
 - Custom hardware data streams
@@ -780,21 +784,24 @@ This separation ensures the system can adapt to different display sizes, resolut
 
 ### Display Hardware
 - **33.2-inch square display monitor** with **1900 × 1900 resolution**
-- **Android 8.1** operating system
-- **RK3566 quad-core processor**
-- **2 GB RAM / 16 GB storage**
-- **Multi-touch capacitive input**
+- **Monitor panel has no onboard OS (passive display only)**
+- **Connected via HDMI to MOREFINE mini PC**
+- **Mini PC CPU:** Intel(R) Core(TM) i3-M305 @ 1.80GHz
+- **Mini PC Memory:** 16 GB RAM (4800 MT/s)
+- **Mini PC OS:** Windows 11 Pro
+- **Infrared touch overlay input (40+ touch points); monitor panel itself is non-touch**
+- **Touch data path:** Infrared touch overlay to MOREFINE mini PC via USB cable
 - **Ethernet and Wi-Fi connectivity**
 
 ---
 
 ### Display Application
 
-The guest-facing table experience will be implemented as a **hybrid Android kiosk application** combining a native Android host with a web-rendered UI and real-time graphics layer.
+The guest-facing table experience will be implemented as a **Windows kiosk application stack** running on the external MOREFINE mini PC, combining a Windows host shell with a web-rendered UI and real-time graphics layer.
 
 #### Native Host Layer
-- **Language:** Kotlin
-- **Role:** Android kiosk shell / container app
+- **Platform:** Windows 11 Pro (mini PC host)
+- **Role:** Kiosk shell / container app for fullscreen operation
 
 **Responsibilities:**
 - Launch automatically on device boot
@@ -803,7 +810,7 @@ The guest-facing table experience will be implemented as a **hybrid Android kios
 - Manage app lifecycle and recovery from crashes
 - Host the embedded local server
 - Provide access to device-level diagnostics and health checks
-- Load and display the React application in a fullscreen WebView
+- Load and display the React application in fullscreen browser/kiosk container
 
 #### Frontend UI Layer
 - **Framework:** React
@@ -837,7 +844,7 @@ The guest-facing table experience will be implemented as a **hybrid Android kios
 Implemented as internal TypeScript modules within the display application.
 
 **Core Modules:**
-- **Input Adapter:** consumes standard Android multi-touch events
+- **Input Adapter:** consumes multi-touch events from the infrared touch overlay
 - **Tracking Engine:** groups and tracks 3-point coaster signatures
 - **Calibration Mapper:** converts touch coordinates into display coordinates
 - **Animation Dispatcher:** maps coaster identity and drink profile to visual behavior
@@ -847,12 +854,12 @@ Implemented as internal TypeScript modules within the display application.
 
 ### Backend
 
-The backend will run as an **embedded local server on the table device**, designed for **offline-capable, low-latency operation**.
+The backend will run as an **embedded local server on the MOREFINE mini PC**, designed for **offline-capable, low-latency operation**.
 
 #### Backend Runtime
 - **Language:** Kotlin
 - **Framework:** Ktor
-- **Deployment Model:** Embedded server running locally on the Android table device
+- **Deployment Model:** Embedded server running locally on the Windows 11 Pro mini PC
 
 #### Backend Responsibilities
 - Session start / end state management
@@ -876,7 +883,7 @@ The backend will run as an **embedded local server on the table device**, design
 
 #### Data Storage
 - **Database:** SQLite
-- **Android Persistence Layer:** Room
+- **Persistence Layer:** SQLite ORM/data access layer
 
 **Stored Data Includes:**
 - active and historical sessions
@@ -1028,10 +1035,10 @@ Each drink profile may include:
 
 ### Suggested Repository Structure
 
-#### Android Host / Embedded Backend
-- Kotlin Android kiosk shell
+#### Windows Host / Embedded Backend
+- Windows kiosk shell
 - Embedded Ktor server
-- SQLite / Room persistence
+- SQLite persistence
 - Device diagnostics and startup management
 
 #### Display Frontend
@@ -1050,14 +1057,14 @@ Each drink profile may include:
 
 | Layer | Chosen Stack |
 |---|---|
-| **Display Host** | Kotlin Android kiosk shell |
+| **Display Host** | Windows 11 Pro kiosk shell on MOREFINE mini PC |
 | **Display UI** | React + TypeScript |
 | **Real-Time Visuals** | PixiJS |
 | **Frontend State** | Zustand |
 | **Frontend Build Tool** | Vite |
 | **Embedded Backend** | Kotlin + Ktor |
 | **Local Database** | SQLite |
-| **Persistence Layer** | Room |
+| **Persistence Layer** | SQLite data access layer |
 | **Realtime Communication** | WebSockets |
 | **Operational API** | REST |
 | **Bartender App** | Native iOS app with NFC support |
