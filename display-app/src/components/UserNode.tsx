@@ -25,6 +25,17 @@ function computeRotation(pos: Point, canvasSize: number): number {
 
 const MIN_POS = 0.05
 const MAX_POS = 0.95
+const TAP_SLOP_PX = 16
+
+export function isTapGesture(
+  start: Point | null,
+  end: Point,
+  didDrag: boolean,
+  slopPx = TAP_SLOP_PX,
+): boolean {
+  if (!start || didDrag) return false
+  return Math.hypot(end.x - start.x, end.y - start.y) < slopPx
+}
 
 export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Element {
   const { togglePanel, setUserNodePosition, addOrder } = useAppStore()
@@ -74,7 +85,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       const dx = e.clientX - pointerStartRef.current.x
       const dy = e.clientY - pointerStartRef.current.y
 
-      if (!didDragRef.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+      if (!didDragRef.current && Math.hypot(dx, dy) < TAP_SLOP_PX) return
 
       didDragRef.current = true
 
@@ -87,16 +98,24 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     [canvasSize, node.id, setUserNodePosition],
   )
 
-  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.releasePointerCapture(e.pointerId)
-    pointerStartRef.current = null
-    nodeStartPosRef.current = null
-    e.stopPropagation()
-  }, [])
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const pointerStart = pointerStartRef.current
+      const wasTap = isTapGesture(
+        pointerStart,
+        { x: e.clientX, y: e.clientY },
+        didDragRef.current,
+      )
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (didDragRef.current) return
+      e.currentTarget.releasePointerCapture(e.pointerId)
+      pointerStartRef.current = null
+      nodeStartPosRef.current = null
+
+      if (!wasTap) {
+        e.stopPropagation()
+        return
+      }
+
       togglePanel(node.id)
       if (!node.panelOpen) {
         setScreen({ view: 'home' })
@@ -105,6 +124,14 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     },
     [node.id, node.panelOpen, togglePanel],
   )
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    pointerStartRef.current = null
+    nodeStartPosRef.current = null
+    didDragRef.current = false
+    e.stopPropagation()
+  }, [])
 
   const navigate = useCallback((s: PanelScreen) => setScreen(s), [])
 
@@ -190,7 +217,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onClick={handleClick}
+        onPointerCancel={handlePointerCancel}
       >
         {node.ownerIndex + 1}
       </div>
