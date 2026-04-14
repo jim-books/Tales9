@@ -79,11 +79,24 @@ describe('useAppStore', () => {
       id: 'coaster-1',
       signature: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 1 }],
       centroid: { x: 0.5, y: 0.33 },
-      detected: true,
+      detectionState: 'confirmed',
     })
     useAppStore.getState().assignDrinkToCoaster('coaster-1', 'pisco-colada')
     const coaster = useAppStore.getState().coasters.find((c) => c.id === 'coaster-1')
     expect(coaster?.drinkId).toBe('pisco-colada')
+  })
+
+  it('keeps preview coaster as not fully detected', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().upsertCoaster({
+      id: 'coaster-preview',
+      signature: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 1 }],
+      centroid: { x: 0.5, y: 0.33 },
+      detectionState: 'preview',
+    })
+    const coaster = useAppStore.getState().coasters.find((c) => c.id === 'coaster-preview')
+    expect(coaster?.detectionState).toBe('preview')
+    expect(coaster?.detected).toBe(false)
   })
 
   it('startGame sets phase 0 with no chosen IDs', () => {

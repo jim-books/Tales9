@@ -5,6 +5,7 @@ export type DrinkCategory = 'CLASSICS' | 'COFFEE_BASED' | 'DESSERT_INSPIRED'
 export type OrderStatus = 'pending' | 'preparing' | 'on_the_way' | 'arrived'
 export type GameType = 'truth_or_dare' | 'kings_game'
 export type UserColor = 'blue' | 'green' | 'orange' | 'purple'
+export type CoasterDetectionState = 'preview' | 'confirmed' | 'inactive'
 
 export interface DrinkProfile {
   id: string
@@ -34,6 +35,8 @@ export interface Coaster {
   signature: CoasterTouchSignature
   centroid: Point
   drinkId: string | null
+  detectionState: CoasterDetectionState
+  /** Backward-compatible flag: true only while a coaster is confirmed */
   detected: boolean
 }
 

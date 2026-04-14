@@ -33,7 +33,12 @@ interface AppState {
   setUserNodePosition: (nodeId: string, position: Point) => void
   togglePanel: (nodeId: string) => void
 
-  upsertCoaster: (coaster: Omit<Coaster, 'drinkId'> & { drinkId?: string | null }) => void
+  upsertCoaster: (
+    coaster: Omit<Coaster, 'drinkId' | 'detected' | 'detectionState'> & {
+      drinkId?: string | null
+      detectionState?: Coaster['detectionState']
+    },
+  ) => void
   removeCoaster: (coasterId: string) => void
   assignDrinkToCoaster: (coasterId: string, drinkId: string) => void
 
@@ -94,10 +99,12 @@ export const useAppStore = create<AppState>((set) => ({
   upsertCoaster: (coaster) =>
     set((s) => {
       const existing = s.coasters.find((c) => c.id === coaster.id)
+      const detectionState = coaster.detectionState ?? existing?.detectionState ?? 'confirmed'
       const updated: Coaster = {
         drinkId: existing?.drinkId ?? null,
         ...coaster,
-        detected: true,
+        detectionState,
+        detected: detectionState === 'confirmed',
       }
       return {
         coasters: existing
@@ -109,7 +116,9 @@ export const useAppStore = create<AppState>((set) => ({
   removeCoaster: (coasterId) =>
     set((s) => ({
       coasters: s.coasters.map((c) =>
-        c.id === coasterId ? { ...c, detected: false } : c,
+        c.id === coasterId
+          ? { ...c, detectionState: 'inactive', detected: false }
+          : c,
       ),
     })),
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Application, Assets } from 'pixi.js'
+import { Application, Assets, Graphics } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
@@ -27,6 +27,12 @@ export function PixiStage(): JSX.Element {
   const spritesRef = useRef(new Map<string, IngredientSprite>())
   const gameLayerRef = useRef<GameLayer | null>(null)
   const battlesRef = useRef(new Map<string, ProximityBattle>())
+  const previewsRef = useRef(new Map<string, {
+    graphics: Graphics
+    phase: number
+    x: number
+    y: number
+  }>())
 
   // ─── Init PixiJS once ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -78,6 +84,18 @@ export function PixiStage(): JSX.Element {
       app.ticker.add(() => {
         animsRef.current.forEach((a) => a.tick(app.ticker))
         spritesRef.current.forEach((s) => s.tick(app.ticker))
+        previewsRef.current.forEach((preview) => {
+          preview.phase += app.ticker.deltaTime * 0.06
+          const r = 38 + 8 * Math.sin(preview.phase)
+          const alpha = 0.28 + 0.14 * (1 + Math.sin(preview.phase * 1.4)) * 0.5
+          preview.graphics.clear()
+          preview.graphics
+            .circle(preview.x, preview.y, r)
+            .stroke({ color: 0x66ccff, width: 2, alpha })
+          preview.graphics
+            .circle(preview.x, preview.y, r * 0.6)
+            .stroke({ color: 0x99e6ff, width: 1, alpha: alpha * 0.7 })
+        })
       })
     })
 
@@ -93,6 +111,8 @@ export function PixiStage(): JSX.Element {
       spritesRef.current.clear()
       battlesRef.current.forEach((b) => b.destroy())
       battlesRef.current.clear()
+      previewsRef.current.forEach((p) => p.graphics.destroy())
+      previewsRef.current.clear()
       appRef.current?.destroy(true, { children: true })
       appRef.current = null
     }
@@ -169,13 +189,45 @@ export function PixiStage(): JSX.Element {
       spritesRef.current.clear()
       battlesRef.current.forEach((b) => { b.unmount(); b.destroy() })
       battlesRef.current.clear()
+      previewsRef.current.forEach((p) => {
+        if (p.graphics.parent) p.graphics.parent.removeChild(p.graphics)
+        p.graphics.destroy()
+      })
+      previewsRef.current.clear()
       return
     }
 
     standbyRef.current?.unmount()
 
+    const clearPreview = (id: string): void => {
+      const preview = previewsRef.current.get(id)
+      if (!preview) return
+      if (preview.graphics.parent) preview.graphics.parent.removeChild(preview.graphics)
+      preview.graphics.destroy()
+      previewsRef.current.delete(id)
+    }
+
+    const upsertPreview = (id: string, x: number, y: number): void => {
+      const preview = previewsRef.current.get(id)
+      if (preview) {
+        preview.x = x
+        preview.y = y
+        return
+      }
+      const graphics = new Graphics()
+      app.stage.addChild(graphics)
+      previewsRef.current.set(id, { graphics, phase: 0, x, y })
+    }
+
     for (const c of coasters) {
-      if (c.detected && c.drinkId) {
+      if (c.detectionState === 'preview') {
+        upsertPreview(c.id, c.centroid.x, c.centroid.y)
+        const anim = animsRef.current.get(c.id)
+        if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
+        const sprite = spritesRef.current.get(c.id)
+        if (sprite) { sprite.unmount(); sprite.destroy(); spritesRef.current.delete(c.id) }
+      } else if (c.detectionState === 'confirmed' && c.drinkId) {
+        clearPreview(c.id)
         const profile = getDrinkById(c.drinkId)
         if (!profile) continue
 
@@ -191,6 +243,7 @@ export function PixiStage(): JSX.Element {
           animsRef.current.get(c.id)!.updatePosition(c.centroid)
         }
       } else {
+        clearPreview(c.id)
         const anim = animsRef.current.get(c.id)
         if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
         const sprite = spritesRef.current.get(c.id)
@@ -200,7 +253,9 @@ export function PixiStage(): JSX.Element {
 
     // ── Proximity battle detection ────────────────────────────────────────────
     const activePairKeys = new Set<string>()
-    const activeCoasters = coasters.filter((c) => c.detected && c.drinkId)
+    const activeCoasters = coasters.filter(
+      (c) => c.detectionState === 'confirmed' && c.drinkId,
+    )
     for (let i = 0; i < activeCoasters.length; i++) {
       for (let j = i + 1; j < activeCoasters.length; j++) {
         const a = activeCoasters[i]

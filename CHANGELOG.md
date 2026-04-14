@@ -4,6 +4,58 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 
 ---
 
+## Session: 2026-04-15
+
+### Completed
+- [x] Started end-to-end implementation for upgraded coaster detection/tracking (PRD-aligned preview -> confirm flow)
+- [x] Created implementation execution plan and began stepwise work across engine/store/render/test surfaces
+- [x] `display-app/src/types/index.ts` — added explicit `CoasterDetectionState` (`preview`/`confirmed`/`inactive`) and extended `Coaster` shape to carry lifecycle state
+- [x] `display-app/src/engine/CoasterTemplates.ts` — added known coaster template catalog, signature metrics helpers, and per-template ratio/size/area tolerances
+- [x] `display-app/src/engine/TrackingEngine.ts` — refactored to template-based tracking with preview/confirmed lifecycle, frame transition events, and richer cluster diagnosis
+- [x] `display-app/src/store/useAppStore.ts` — updated coaster upsert/remove semantics to preserve `detectionState` and only treat `confirmed` as fully detected
+- [x] `display-app/src/App.tsx` — switched touch pipeline to consume tracking frame events, upsert preview vs confirmed state, and gate `AnimationDispatcher.onCoasterDetected()` on explicit confirmation events
+- [x] `display-app/src/pixi/PixiStage.tsx` — added lightweight preview pulse rendering for candidate coasters and kept full drink/sprite effects gated to `confirmed` state only
+- [x] `display-app/src/engine/AnimationDispatcher.ts` — introduced explicit `onCoasterConfirmed()` API and kept `onCoasterDetected()` as compatibility alias
+- [x] `display-app/src/App.tsx` — updated runtime to trigger full animation dispatch only through `onCoasterConfirmed()`
+- [x] `display-app/src/components/DebugPanel.tsx` — diagnostics now expose coaster lifecycle state (`preview`/`confirmed`/`inactive`) and template-selection metrics per cluster
+- [x] `display-app/src/components/DiagnosticsOverlay.tsx` — updated coaster display to lifecycle-aware glyph/state output
+- [x] `display-app/src/__tests__/TrackingEngine.test.ts` — rewritten for template-based preview/confirm lifecycle, rejection, and removal-event semantics
+- [x] `display-app/src/__tests__/useAppStore.test.ts` — updated coaster upsert expectations for lifecycle state and added explicit preview-state assertion
+- [x] `display-app/src/__tests__/AnimationDispatcher.test.ts` — shifted primary dispatch expectations to `onCoasterConfirmed()` and added alias-compatibility coverage
+- [x] `display-app/src/engine/CoasterTemplates.ts` — switched templates to side-length specs (`C1: 60/60/60`, `C2: 55/45/45`) and added `COASTER_TEMPLATE_SPECS` + `setCoasterTemplateSpecs()` hook for future Firebase overrides
+- [x] `display-app/src/engine/CoasterTemplates.ts` — added `COASTER_MM_TO_TOUCH_UNITS` + `setCoasterMmToTouchUnits()` calibration hook for future Firebase/runtime config
+- [x] `display-app/src/engine/TrackingEngine.ts` — now reads templates through `getCoasterTemplates()` so runtime template specs can be replaced later (e.g. Firebase sync path)
+- [x] `display-app/src/__tests__/TrackingEngine.test.ts` — fixtures now generate geometry from C1/C2 side lengths using `COASTER_MM_TO_TOUCH_UNITS`, keeping tests aligned with side-length templates
+
+### In Progress
+- [x] Define coaster template catalog and shared detection lifecycle types
+- [x] Refactor TrackingEngine to template-based preview/confirm state machine
+- [x] Wire App + Zustand for preview vs confirmed coaster state
+- [x] Add generic preview rendering and keep full animation gated on confirmed state
+- [x] Update tests and diagnostics for new detection semantics
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        8 tests
+✓ AnimationDispatcher.test.ts  10 tests
+✓ useAppStore.test.ts          14 tests
+✓ SpriteRegistry.test.ts       25 tests
+Total: 70/70
+```
+
+- [x] `npm run build` clean (`tsc -b && vite build`)
+
+### Failed Attempts
+- `display-app/src/App.tsx` briefly had duplicated `upsertCoaster()` in demo toggle branch while migrating to `detectionState`. Removed duplicate immediately to avoid double writes.
+- Initial run after introducing mm-based template scaling failed in `TrackingEngine.test.ts` because old synthetic points were too small for new size windows; fixed by converting test fixtures to side-length-derived geometry.
+
+### Blocked
+- None.
+
+---
+
 ## Session: 2026-03-27
 
 ### Setup Complete

@@ -45,9 +45,9 @@ function MainView(): JSX.Element {
     dispatcherRef.current = dispatcher
 
     const adapter = new InputAdapter('touch', (points) => {
-      const tracked = tracker.processFrame(points)
+      const frame = tracker.processFrame(points)
+      const tracked = frame.coasters
       setFrameDiagnosis(tracker.getLastDiagnosis())
-      const activeIds = new Set(tracked.filter((c) => c.active).map((c) => c.id))
 
       for (const coaster of tracked) {
         if (coaster.active) {
@@ -55,22 +55,20 @@ function MainView(): JSX.Element {
             id: coaster.id,
             signature: coaster.signature,
             centroid: coaster.centroid,
-            detected: true,
+            detectionState: coaster.state,
           })
-          if (!activeCoasterIdsRef.current.has(coaster.id)) {
-            dispatcher.onCoasterDetected(coaster.id, coaster.centroid)
-          }
+        } else {
+          removeCoaster(coaster.id)
         }
       }
 
-      for (const id of activeCoasterIdsRef.current) {
-        if (!activeIds.has(id)) {
-          removeCoaster(id)
-          dispatcher.onCoasterRemoved(id)
+      for (const event of frame.events) {
+        if (event.type === 'confirmed') {
+          dispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
+        } else if (event.type === 'removed') {
+          dispatcher.onCoasterRemoved(event.coasterId)
         }
       }
-
-      activeCoasterIdsRef.current = activeIds
     })
 
     if (containerRef.current) {
@@ -133,10 +131,10 @@ function MainView(): JSX.Element {
       activeCoasterIdsRef.current.delete(id)
     } else {
       // Spawn demo coaster with drink pre-assigned
-      upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detected: true, drinkId })
+      upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detectionState: 'confirmed', drinkId })
       assignDrinkToCoaster(id, drinkId)
       dispatcherRef.current?.assignDrink(id, drinkId)
-      dispatcherRef.current?.onCoasterDetected(id, centroid)
+      dispatcherRef.current?.onCoasterConfirmed(id, centroid)
       activeCoasterIdsRef.current.add(id)
     }
   }

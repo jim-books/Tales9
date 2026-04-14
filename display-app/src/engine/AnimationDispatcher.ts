@@ -34,8 +34,8 @@ export class AnimationDispatcher {
     this.assignments.set(coasterId, drinkId)
   }
 
-  /** Called by TrackingEngine when a coaster is detected on the surface */
-  onCoasterDetected(coasterId: string, position: { x: number; y: number }): void {
+  /** Called by TrackingEngine once a coaster is identity-confirmed */
+  onCoasterConfirmed(coasterId: string, position: { x: number; y: number }): void {
     const drinkId = this.assignments.get(coasterId)
     if (!drinkId) return
 
@@ -44,6 +44,11 @@ export class AnimationDispatcher {
 
     this.emit({ action: 'PLAY', coasterId, profile })
     this.emit({ action: 'SPAWN_SPRITE', coasterId, character: profile.spriteCharacter, position })
+  }
+
+  /** Backward-compatible alias: detection events should call `onCoasterConfirmed`. */
+  onCoasterDetected(coasterId: string, position: { x: number; y: number }): void {
+    this.onCoasterConfirmed(coasterId, position)
   }
 
   /** Called by TrackingEngine when a coaster has been removed */

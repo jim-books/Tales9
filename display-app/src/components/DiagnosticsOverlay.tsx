@@ -2,6 +2,8 @@ import { useAppStore } from '../store/useAppStore'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 
 const px = (n: number): string => Math.round(n).toString()
+const stateGlyph = (state: 'preview' | 'confirmed' | 'inactive'): string =>
+  state === 'confirmed' ? '◉' : state === 'preview' ? '◌' : '○'
 
 /**
  * DiagnosticsOverlay
@@ -44,7 +46,7 @@ export function DiagnosticsOverlay(): JSX.Element {
       {coasters.length === 0
         ? '  (none)\n'
         : coasters.map((c) =>
-            `  [${c.id}] ${c.detected ? '◉' : '○'}  ` +
+            `  [${c.id}] ${stateGlyph(c.detectionState)} ${c.detectionState}  ` +
             `pos=(${px(c.centroid.x)},${px(c.centroid.y)})  ` +
             `drink=${c.drinkId ?? '—'}\n`,
           )}

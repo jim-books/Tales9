@@ -24,27 +24,27 @@ describe('AnimationDispatcher', () => {
     const unsub = dispatcher.subscribe((cmd) => collected.push(cmd))
     unsub()
     dispatcher.assignDrink('c1', 'pisco-colada')
-    dispatcher.onCoasterDetected('c1', { x: 100, y: 200 })
+    dispatcher.onCoasterConfirmed('c1', { x: 100, y: 200 })
     expect(collected).toHaveLength(0)
   })
 
-  it('onCoasterDetected with no assignment emits nothing', () => {
+  it('onCoasterConfirmed with no assignment emits nothing', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.onCoasterDetected('c-unknown', { x: 100, y: 100 })
+    dispatcher.onCoasterConfirmed('c-unknown', { x: 100, y: 100 })
     expect(collected).toHaveLength(0)
   })
 
-  it('onCoasterDetected with unknown drinkId emits nothing', () => {
+  it('onCoasterConfirmed with unknown drinkId emits nothing', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'not-a-real-drink')
-    dispatcher.onCoasterDetected('c1', { x: 100, y: 100 })
+    dispatcher.onCoasterConfirmed('c1', { x: 100, y: 100 })
     expect(collected).toHaveLength(0)
   })
 
-  it('onCoasterDetected with valid drinkId emits PLAY then SPAWN_SPRITE', () => {
+  it('onCoasterConfirmed with valid drinkId emits PLAY then SPAWN_SPRITE', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'pisco-colada')
-    dispatcher.onCoasterDetected('c1', { x: 100, y: 200 })
+    dispatcher.onCoasterConfirmed('c1', { x: 100, y: 200 })
 
     expect(collected).toHaveLength(2)
 
@@ -88,7 +88,7 @@ describe('AnimationDispatcher', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'pisco-colada')
     dispatcher.assignDrink('c1', 'espresso-martini')
-    dispatcher.onCoasterDetected('c1', { x: 0, y: 0 })
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
 
     expect(collected).toHaveLength(2)
     const play = collected[0]
@@ -106,5 +106,14 @@ describe('AnimationDispatcher', () => {
     dispatcher.onCoasterRemoved('c1')
     expect(a).toHaveLength(0)
     expect(b).toHaveLength(2)
+  })
+
+  it('onCoasterDetected remains a compatibility alias of onCoasterConfirmed', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'pisco-colada')
+    dispatcher.onCoasterDetected('c1', { x: 10, y: 20 })
+    expect(collected).toHaveLength(2)
+    expect(collected[0].action).toBe('PLAY')
+    expect(collected[1].action).toBe('SPAWN_SPRITE')
   })
 })
