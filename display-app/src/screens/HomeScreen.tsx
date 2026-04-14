@@ -1,5 +1,6 @@
 import type { UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { PressableButton } from '../components/PressableButton'
 import './screens.css'
 
 interface HomeScreenProps {
@@ -68,17 +69,17 @@ export function HomeScreen({ onNavigate }: HomeScreenProps): JSX.Element {
 
       <div className="home-cards">
         {CARDS.map((card) => (
-          <button
+          <PressableButton
             key={card.view}
             className="home-card"
-            onClick={() => onNavigate({ view: card.view })}
+            onPress={() => onNavigate({ view: card.view })}
           >
             <span className="home-card__icon">{card.icon}</span>
             <span className="home-card__text">
               <span className="home-card__title">{card.title}</span>
               <span className="home-card__sub">{card.sub}</span>
             </span>
-          </button>
+          </PressableButton>
         ))}
       </div>
     </div>

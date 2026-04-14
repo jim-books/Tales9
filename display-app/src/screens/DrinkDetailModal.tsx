@@ -1,5 +1,6 @@
 import { getDrinkById } from '../data/drinkCatalog'
 import type { UserColor } from '../types'
+import { PressableButton } from '../components/PressableButton'
 import './screens.css'
 
 interface DrinkDetailModalProps {
@@ -22,12 +23,12 @@ export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBa
     return (
       <div className="screen">
         <div className="screen-header">
-          <button className="screen-back" onClick={onBack}>←</button>
+          <PressableButton className="screen-back" onPress={onBack}>←</PressableButton>
           <span className="screen-header__title">Drink Details</span>
         </div>
         <div className="screen-body">
           <p style={{ color: 'var(--color-muted)', fontSize: 12 }}>Drink not found.</p>
-          <button className="btn-secondary" onClick={onBack}>Go Back</button>
+          <PressableButton className="btn-secondary" onPress={onBack}>Go Back</PressableButton>
         </div>
       </div>
     )
@@ -36,7 +37,7 @@ export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBa
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={onBack}>←</button>
+        <PressableButton className="screen-back" onPress={onBack}>←</PressableButton>
         <span className="screen-header__title">Drink Details</span>
       </div>
       <div className="screen-body">
@@ -68,12 +69,12 @@ export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBa
         <div className="detail-price">${drink.price}</div>
         <p className="detail-description">{drink.description}</p>
 
-        <button className="btn-primary" onClick={() => onOrder(drink.id)}>
+        <PressableButton className="btn-primary" onPress={() => onOrder(drink.id)}>
           Order This Drink
-        </button>
-        <button className="btn-ghost" onClick={onBack}>
+        </PressableButton>
+        <PressableButton className="btn-ghost" onPress={onBack}>
           ← Back to Menu
-        </button>
+        </PressableButton>
       </div>
     </div>
   )

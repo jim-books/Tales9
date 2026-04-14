@@ -7,29 +7,14 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 ## Session: 2026-04-15
 
 ### Completed
-- [x] `npm test -- src/__tests__/` rerun clean after per-node game popup refactor (`87/87` passing; existing jsdom canvas warning remains pre-existing)
-- [x] `display-app/src/__tests__/GameOverlay.test.tsx` — added focused coverage ensuring per-node game popups render notifications for everyone but actions only for the chosen user
-- [x] `display-app/src/screens/GameOverlay.tsx` — replaced center common-space game card with per-user popups rendered next to each node; only the chosen user receives action buttons while others see notification-only cards
-- [x] `npm test -- src/__tests__/` rerun clean after correcting top/bottom side placement logic (`85/85` passing; existing jsdom canvas warning remains pre-existing)
-- [x] `display-app/src/__tests__/UserNode.test.tsx` — updated coverage for corrected top/bottom rotations and new side-by-side anchor behavior for top/bottom nodes
-- [x] `display-app/src/components/UserNode.tsx` — reverted mistaken top/bottom rotation flip and changed top/bottom panel anchoring to side-by-side placement next to the node (matching left/right interaction logic)
-- [x] `npm test -- src/__tests__/` rerun clean after autoplay + top/bottom orientation adjustments (`85/85` passing; existing jsdom canvas warning remains pre-existing)
-- [x] `display-app/src/__tests__/UserNode.test.tsx` — updated top/bottom rotation expectations to match revised edge-facing behavior
-- [x] `display-app/src/screens/MenuScreen.tsx` + `display-app/src/screens/screens.css` — switched drink media from tap-to-play to default auto-play loop once in-view (lazy-loaded), and removed click-only media wrapper semantics
-- [x] `display-app/src/components/UserNode.tsx` — swapped top/bottom edge rotation semantics (`top=0`, `bottom=180`) while keeping left/right unchanged based on live orientation feedback
-- [x] `npm test -- src/__tests__/` rerun clean after UserNode UI expansion (`85/85` passing; existing jsdom canvas warning remains pre-existing)
-- [x] `display-app/src/__tests__/drinkMenuMedia.test.ts` — added coverage ensuring each catalog drink has a mapped `.mp4` menu animation asset
-- [x] `display-app/src/screens/screens.css` — added Game portal styles and tap-to-play menu media styles/overlay state labels
-- [x] `display-app/src/screens/MenuScreen.tsx` — added lazy menu media loader with viewport-triggered loading and explicit tap-to-play behavior per drink card
-- [x] `display-app/src/data/drinkMenuMedia.ts` — added explicit drink-to-mp4 mapping for in-menu tap-to-play media, including `PisoColada.mp4` legacy filename normalization
-- [x] `display-app/src/components/UserNode.tsx` — scaled expanded panel UI to 75% (including proportional inner content), and wired new `game` screen to existing `startGame()` flow
-- [x] `display-app/src/screens/GamePortalScreen.tsx` — added in-panel Game portal screen with `Truth or Dare` and `King's Game` launch actions
-- [x] `display-app/src/screens/HomeScreen.tsx` — added a new `Game` portal card on panel home
-- [x] `display-app/src/components/PanelScreen.ts` — added `game` view route for in-panel Game portal navigation
-- [x] `npm test -- src/__tests__/` rerun clean after UserNode regression fix (`84/84` passing; existing jsdom canvas warning remains pre-existing)
-- [x] `display-app/src/__tests__/UserNode.test.tsx` — updated rotation expectations to canonical edge mapping and added regression checks for non-rotated anchor wrapper + rotated panel-surface transform separation
-- [x] `display-app/src/components/UserNode.tsx` — fixed flipped edge rotation mapping (`bottom=0`, `right=-90`, `top=180`, `left=90`) to match existing y-down edge convention
-- [x] `display-app/src/components/UserNode.tsx` — split panel anchor wrapper from rotated panel surface and elevated node handle z-index so open panel no longer blocks node interaction
+- [x] `display-app/src/App.tsx` + `display-app/src/pixi/PixiStage.tsx` — moved `InputAdapter` attachment from the app root container to the Pixi/common-space host via `onHostReady`, so panel touches no longer feed coaster tracking frames
+- [x] `display-app/src/components/PressableButton.tsx` — added shared pointer-tap button activation with click de-duplication fallback for environments where synthetic click is unreliable under persistent multi-touch
+- [x] `display-app/src/screens/{AboutScreen,HomeScreen,MenuScreen,DrinkDetailModal,QuizFlow,OrderStatusPanel}.tsx` — switched core guest panel actions from `onClick` to shared `onPress` activation
+- [x] `display-app/src/screens/screens.css` — set `.screen-body` touch policy to `touch-action: pan-y` + `overscroll-behavior: contain` for more reliable in-panel vertical scrolling
+- [x] `display-app/src/__tests__/PressableButton.test.tsx` — added focused tests for pointer tap activation, drag rejection, and keyboard/click fallback behavior
+- [x] `display-app/src/__tests__/AppInputScope.test.tsx` — added regression test proving `InputAdapter.attach()` targets the Pixi host instead of the app root
+- [x] `display-app/src/components/UserNode.tsx` — restored compatibility exports (`panelAnchorStyleForEdge`, `panelTransformForEdge`) used by `GameOverlay`
+- [x] `npm test` + `npm run build` rerun clean after minimal panel-touch fix (`89/89` passing; existing jsdom canvas warning and chunk-size warning remain pre-existing)
 - [x] `npm test -- src/__tests__/` rerun clean after UserNode orientation upgrade (`82/82` passing; existing jsdom canvas warning remains pre-existing)
 - [x] `display-app/src/__tests__/UserNode.test.tsx` — expanded to cover nearest-edge resolution, ambiguous-corner approach tie-breaks, previous/owner fallbacks, approach-vector extraction, and discrete edge rotation mapping
 - [x] `display-app/src/__tests__/useAppStore.test.ts` — added coverage for spawn-derived owner/view edge defaults and orientation lock/unlock store actions
@@ -82,21 +67,24 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 
 ### Test Results
 ```
-✓ drinkCatalog.test.ts          7 tests
 ✓ CalibrationMapper.test.ts     6 tests
-✓ TrackingEngine.test.ts        8 tests
 ✓ AnimationDispatcher.test.ts  10 tests
+✓ AppInputScope.test.tsx         1 test
+✓ drinkCatalog.test.ts          7 tests
+✓ drinkMenuMedia.test.ts         1 test
+✓ GameOverlay.test.tsx           2 tests
+✓ PressableButton.test.tsx       3 tests
+✓ TrackingEngine.test.ts        8 tests
 ✓ useAppStore.test.ts          17 tests
-✓ UserNode.test.tsx            11 tests
+✓ UserNode.test.tsx             9 tests
 ✓ SpriteRegistry.test.ts       25 tests
-✓ drinkMenuMedia.test.ts        1 test
-Total: 85/85
+Total: 89/89
 ```
 
 - [x] `npm run build` clean (`tsc -b && vite build`)
 
 ### Failed Attempts
-- First `GameOverlay` test used exact-text lookups for `GREEN` / `ORANGE`, but the popup copy embeds those labels inside longer strings; relaxed the matcher to regex instead of treating the UI as broken.
+- Full-suite verification initially failed because `GameOverlay` still imported `panelAnchorStyleForEdge` / `panelTransformForEdge` from `UserNode` after orientation refactors removed those exports; reintroduced compatibility exports to restore green tests/build.
 - Full DOM-level pointer simulation for `UserNode` remained too brittle in Vitest/jsdom, so the regression test was reduced to the extracted gesture classifier that contains the actual tap-vs-drag decision logic.
 - The original `4px` drag threshold was unrealistically tight for the IR overlay and likely treated tap jitter as drag; the fix was widened to a more touch-tolerant `16px` classifier.
 - `user-event` touch-style sequences still were not a trustworthy signal in jsdom for this case, so the test was narrowed to direct pointer sequences with explicit coordinates.

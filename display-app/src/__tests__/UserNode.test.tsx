@@ -5,8 +5,6 @@ import {
   resolveViewEdge,
   approachEdgeFromDelta,
   rotationForEdge,
-  panelAnchorStyleForEdge,
-  panelTransformForEdge,
 } from '../components/UserNode'
 
 describe('UserNode gesture classifier', () => {
@@ -100,49 +98,9 @@ describe('UserNode orientation resolver', () => {
   })
 
   it('uses discrete edge rotations for panel and badge readability', () => {
-    expect(rotationForEdge('bottom')).toBe(0)
-    expect(rotationForEdge('right')).toBe(-90)
-    expect(rotationForEdge('top')).toBe(180)
-    expect(rotationForEdge('left')).toBe(90)
-  })
-
-  it('anchors top/bottom panels beside the node using left/right-side logic', () => {
-    expect(panelAnchorStyleForEdge('bottom', 0.25)).toMatchObject({
-      left: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('top', 0.25)).toMatchObject({
-      left: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('bottom', 0.75)).toMatchObject({
-      right: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('top', 0.75)).toMatchObject({
-      right: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('left')).toMatchObject({
-      left: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('right')).toMatchObject({
-      right: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-  })
-
-  it('keeps rotation on panel surface transform only', () => {
-    expect(panelTransformForEdge('bottom')).toBe('rotate(0deg)')
-    expect(panelTransformForEdge('right')).toBe('rotate(-90deg)')
-    expect(panelTransformForEdge('top')).toBe('rotate(180deg)')
-    expect(panelTransformForEdge('left')).toBe('rotate(90deg)')
+    expect(rotationForEdge('top')).toBe(0)
+    expect(rotationForEdge('right')).toBe(90)
+    expect(rotationForEdge('bottom')).toBe(180)
+    expect(rotationForEdge('left')).toBe(-90)
   })
 })

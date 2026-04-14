@@ -1,4 +1,5 @@
 import type { UserColor } from '../types'
+import { PressableButton } from '../components/PressableButton'
 import './screens.css'
 
 interface AboutScreenProps {
@@ -25,7 +26,7 @@ export function AboutScreen({ userColor: _userColor, onBack }: AboutScreenProps)
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={onBack}>←</button>
+        <PressableButton className="screen-back" onPress={onBack}>←</PressableButton>
         <span className="screen-header__title">About</span>
       </div>
       <div className="screen-body">

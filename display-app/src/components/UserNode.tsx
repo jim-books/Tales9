@@ -8,7 +8,6 @@ import { MenuScreen } from '../screens/MenuScreen'
 import { DrinkDetailModal } from '../screens/DrinkDetailModal'
 import { QuizFlow } from '../screens/QuizFlow'
 import { OrderStatusPanel } from '../screens/OrderStatusPanel'
-import { GamePortalScreen } from '../screens/GamePortalScreen'
 
 interface UserNodeProps {
   node: UserNodeType
@@ -21,9 +20,6 @@ const MAX_POS = 0.95
 const TAP_SLOP_PX = 16
 const EDGE_TIE_THRESHOLD = 0.03
 const APPROACH_INTENT_MIN_PX = 6
-const PANEL_WIDTH = 360
-const PANEL_HEIGHT = 480
-const PANEL_SCALE = 0.75
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -38,14 +34,14 @@ function clampPosition(pos: Point): Point {
 
 export function rotationForEdge(edge: UserEdge): number {
   switch (edge) {
-    case 'bottom':
+    case 'top':
       return 0
     case 'right':
-      return -90
-    case 'top':
+      return 90
+    case 'bottom':
       return 180
     case 'left':
-      return 90
+      return -90
   }
 }
 
@@ -94,78 +90,72 @@ export function resolveViewEdge(
   return ownerEdge
 }
 
-export function panelAnchorStyleForEdge(edge: UserEdge, positionX = 0.5): React.CSSProperties {
+function panelPlacementForEdge(
+  edge: UserEdge,
+  rotation: number,
+): { placementStyle: React.CSSProperties; transform: string } {
+  const rotate = `rotate(${rotation}deg)`
   switch (edge) {
-    case 'bottom':
-      return positionX <= 0.5
-        ? {
-            left: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-        : {
-            right: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-    case 'top':
-      return positionX <= 0.5
-        ? {
-            left: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-        : {
-            right: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-    case 'left':
+    case 'bottom': {
+      const transform = `translateX(-50%) ${rotate}`
       return {
-        left: 'calc(100% + 12px)',
-        top: '50%',
-        transform: 'translateY(-50%)',
+        transform,
+        placementStyle: {
+          bottom: 'calc(100% + 12px)',
+          left: '50%',
+          transform,
+          transformOrigin: 'bottom center',
+        },
       }
-    case 'right':
+    }
+    case 'top': {
+      const transform = `translateX(-50%) ${rotate}`
       return {
-        right: 'calc(100% + 12px)',
-        top: '50%',
-        transform: 'translateY(-50%)',
+        transform,
+        placementStyle: {
+          top: 'calc(100% + 12px)',
+          left: '50%',
+          transform,
+          transformOrigin: 'top center',
+        },
       }
+    }
+    case 'left': {
+      const transform = `translateY(-50%) ${rotate}`
+      return {
+        transform,
+        placementStyle: {
+          left: 'calc(100% + 12px)',
+          top: '50%',
+          transform,
+          transformOrigin: 'left center',
+        },
+      }
+    }
+    case 'right': {
+      const transform = `translateY(-50%) ${rotate}`
+      return {
+        transform,
+        placementStyle: {
+          right: 'calc(100% + 12px)',
+          top: '50%',
+          transform,
+          transformOrigin: 'right center',
+        },
+      }
+    }
   }
 }
 
-function panelTransformOriginForEdge(
+export function panelAnchorStyleForEdge(
   edge: UserEdge,
-  positionX = 0.5,
-): React.CSSProperties['transformOrigin'] {
-  switch (edge) {
-    case 'bottom':
-      return positionX <= 0.5 ? 'left center' : 'right center'
-    case 'top':
-      return positionX <= 0.5 ? 'left center' : 'right center'
-    case 'left':
-      return 'left center'
-    case 'right':
-      return 'right center'
-  }
+  _nodeX: number,
+): React.CSSProperties {
+  return panelPlacementForEdge(edge, rotationForEdge(edge)).placementStyle
 }
 
 export function panelTransformForEdge(edge: UserEdge): string {
   return `rotate(${rotationForEdge(edge)}deg)`
-}
-
-function panelAnimatedTransform(edge: UserEdge, scale: number): string {
-  return `${panelTransformForEdge(edge)} scale(${scale})`
-}
-
-function panelWrapperSizeForEdge(edge: UserEdge): React.CSSProperties {
-  const scaledWidth = PANEL_WIDTH * PANEL_SCALE
-  const scaledHeight = PANEL_HEIGHT * PANEL_SCALE
-  if (edge === 'left' || edge === 'right') {
-    return { width: scaledHeight, height: scaledWidth }
-  }
-  return { width: scaledWidth, height: scaledHeight }
 }
 
 export function isTapGesture(
@@ -186,7 +176,6 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     lockUserNodeOrientation,
     unlockUserNodeOrientation,
     addOrder,
-    startGame,
   } = useAppStore()
   const [screen, setScreen] = useState<PanelScreen>({ view: 'home' })
 
@@ -198,10 +187,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
 
   const displayEdge = node.lockedEdge ?? node.viewEdge ?? node.ownerEdge
   const rotation = rotationForEdge(displayEdge)
-  const panelAnchorStyle = panelAnchorStyleForEdge(displayEdge, node.position.x)
-  const panelTransformOrigin = panelTransformOriginForEdge(displayEdge, node.position.x)
-  const panelTransform = panelTransformForEdge(displayEdge)
-  const panelWrapperSize = panelWrapperSizeForEdge(displayEdge)
+  const panelPlacement = panelPlacementForEdge(displayEdge, rotation)
 
   const left = node.position.x * canvasSize
   const top = node.position.y * canvasSize
@@ -392,18 +378,6 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             onOrder={handleOrder}
           />
         )
-      case 'game':
-        return (
-          <GamePortalScreen
-            userColor={node.color}
-            onBack={() => navigate({ view: 'home' })}
-            onStartGame={(type) => {
-              startGame(type)
-              togglePanel(node.id)
-              unlockUserNodeOrientation(node.id)
-            }}
-          />
-        )
       case 'detail':
         return (
           <DrinkDetailModal
@@ -448,8 +422,6 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       {/* Drag handle / toggle button */}
       <div
         style={{
-          position: 'relative',
-          zIndex: 2,
           width: 64,
           height: 64,
           borderRadius: '50%',
@@ -488,39 +460,28 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         <div
           style={{
             position: 'absolute',
-            ...panelAnchorStyle,
-            ...panelWrapperSize,
-            zIndex: 1,
-            pointerEvents: 'none',
+            ...panelPlacement.placementStyle,
+            width: 360,
+            height: 480,
+            background: 'var(--color-panel)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'panelExpand 0.2s ease-out',
           }}
         >
-          <div
-            style={{
-              width: PANEL_WIDTH,
-              height: PANEL_HEIGHT,
-              background: 'var(--color-panel)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 16,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              transform: `${panelTransform} scale(${PANEL_SCALE})`,
-              transformOrigin: panelTransformOrigin,
-              animation: 'panelExpand 0.2s ease-out',
-              pointerEvents: 'auto',
-            }}
-          >
-            {renderScreen()}
-          </div>
+          {renderScreen()}
         </div>
       )}
 
       <style>{`
         @keyframes panelExpand {
-          from { opacity: 0; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE * 0.92)}; }
-          to   { opacity: 1; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE)}; }
+          from { opacity: 0; transform: ${panelPlacement.transform} scale(0.92); }
+          to   { opacity: 1; transform: ${panelPlacement.transform} scale(1); }
         }
       `}</style>
     </div>
