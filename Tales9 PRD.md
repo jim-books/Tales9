@@ -306,9 +306,9 @@ The status progression provides transparency and anticipation.
 ### Coaster Placement Flow
 
 1. **Guest orders** a drink through their panel (from menu, detail view, or quiz result)
-2. **Bartender receives** the order via the bartender iOS app
+2. **Bartender receives** the order in the staff-facing order dashboard (iOS app at this stage)
 3. **Bartender prepares** the drink
-4. **Bartender assigns** a coaster ID to the order by **NFC scanning** the coaster with their iPhone (or manually entering the printed coaster number as backup)
+4. **Bartender selects** the specific order in the dashboard and manually assigns it to a coaster by either **NFC scanning** the coaster or entering the coaster's printed number (coaster ID)
 5. **Bartender places** the coaster on the table surface, then places the glass on the coaster
 6. **System detects** the coaster via touch tracking and identifies it by geometric signature
 7. **System triggers** drink-specific animations in the Common Space around the coaster area
@@ -342,10 +342,13 @@ When a drink is lifted or removed from the table:
 - If the drink is placed back down, the animation reappears
 
 **Coaster Assignment:**
-The bartender assigns coaster IDs to drinks using the bartender iOS app before placing them on the table:
-- **Primary method:** NFC scan—bartender taps their iPhone to the coaster to scan its NFC tag
-- **Backup method:** Manual entry—bartender types the printed coaster number displayed on the surface
-This mapping ensures the system knows which drink corresponds to which coaster signature when detected on the table.
+- The bartender opens the live order list / dashboard and selects a specific active order
+- The bartender manually pairs that order to one coaster
+- **Primary method:** NFC scan—bartender taps their phone to the coaster to scan its NFC tag
+- **Backup method:** Manual entry—bartender types the coaster's printed number (for example `1`-`10`) using the phone or a keyboard
+- The resulting mapping is **order -> coaster ID**
+- This mapping is written to the table/backend system and mirrored through **Firebase** so all connected staff/table surfaces can resolve the same coaster-to-order relationship
+This mapping ensures the system knows which drink and order correspond to which coaster signature when detected on the table.
 
 ---
 
@@ -488,11 +491,15 @@ For the MVP pilot, the bartender app handles:
    - Receive orders from the table in real-time
    - View pending orders with customer ID and drink details
    - Mark orders as in-progress or completed
+   - Present a live dashboard / list of active orders so staff can choose exactly which order is being served
 
 3. **Coaster Assignment**
-   - Assign a coaster ID to a specific drink/order via **NFC scan** using iPhone
+   - Select a specific active order from the order dashboard, then manually assign it to one coaster
+   - Assign a coaster ID to a specific drink/order via **NFC scan** using phone
    - Each coaster also displays a **printed number** for manual entry as a backup method
+   - Manual number entry may be performed directly on the phone UI or via keyboard input on a desktop/backend panel
    - This mapping enables the table to display the correct animations when the coaster is detected
+   - The assignment mapping is shared through the backend and mirrored to **Firebase** so the table and staff tools stay synchronized
 
 4. **Table Status Monitoring**
    - View current session state
@@ -509,9 +516,9 @@ For the MVP pilot, the bartender app handles:
 
 **Processing an Order:**
 1. Guest places order via their panel
-2. Bartender receives notification in iOS app
+2. Bartender receives notification in the staff dashboard on iOS app
 3. Bartender prepares the drink
-4. Before serving, bartender assigns a coaster ID to the order by **NFC scanning** the coaster with their iPhone (or manually entering the printed coaster number)
+4. Before serving, bartender selects the order in the dashboard and manually assigns a coaster by **NFC scanning** the coaster or entering the printed coaster number
 5. Bartender places the coaster on the table, then places the glass
 6. Table detects the coaster and triggers animations
 
@@ -891,6 +898,7 @@ The backend will run as an **embedded local server on the MOREFINE mini PC**, de
 - drink catalog cache (populated from Firebase at startup)
 - order records
 - coaster assignment mappings
+- order-to-coaster pairing records (including NFC-scanned coaster IDs or manually entered coaster numbers)
 - calibration values
 - local configuration (synced from Firebase at startup)
 - diagnostic and event logs
@@ -899,6 +907,11 @@ The backend will run as an **embedded local server on the MOREFINE mini PC**, de
 - **Firebase Firestore** — configuration sync, multi-table venue settings, completed order backup
 - **Firebase Storage** — remote asset delivery: logos, drink images, sprite graphics
 - **Firebase Analytics** (optional) — usage metrics and session telemetry
+
+**Coaster Assignment Sync:**
+- When staff pair an order to a coaster, the mapping is stored in the local backend as the primary operational record
+- The same mapping is mirrored to **Firebase Firestore** so staff panels and the table can remain synchronized across connected devices
+- The table uses the locally available assignment mapping for real-time coaster resolution; Firebase provides cross-device sync and backup rather than a required round-trip during detection
 
 **Data Ownership by Layer:**
 
