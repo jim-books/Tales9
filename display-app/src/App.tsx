@@ -13,15 +13,6 @@ import type { WsMessage, GameType } from './types'
 import type { FrameDiagnosis } from './engine/TrackingEngine'
 import './App.css'
 
-/**
- * Demo fallback assignments for calibrated physical coasters.
- * This lets touch-tracked IDs trigger visuals without waiting for COASTER_ASSIGN.
- */
-const DEFAULT_PHYSICAL_COASTER_ASSIGNMENTS: Record<string, string> = {
-  'coaster-1': 'pisco-colada',
-  'coaster-4': 'apple-tart',
-}
-
 function MainView(): JSX.Element {
   const sessionActive = useAppStore((s) => s.sessionActive)
   const userNodes = useAppStore((s) => s.userNodes)
@@ -51,9 +42,6 @@ function MainView(): JSX.Element {
     const mapper = new CalibrationMapper()
     const tracker = new TrackingEngine(mapper)
     const dispatcher = new AnimationDispatcher()
-    for (const [coasterId, drinkId] of Object.entries(DEFAULT_PHYSICAL_COASTER_ASSIGNMENTS)) {
-      dispatcher.assignDrink(coasterId, drinkId)
-    }
     dispatcherRef.current = dispatcher
 
     const adapter = new InputAdapter('touch', (points) => {
