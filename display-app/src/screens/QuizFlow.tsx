@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { quizQuestions, recommendDrink, getDrinkById } from '../data/drinkCatalog'
 import type { UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
-import { PressableButton } from '../components/PressableButton'
 import './screens.css'
 
 interface QuizFlowProps {
@@ -39,9 +38,9 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
     return (
       <div className="screen">
         <div className="screen-header">
-          <PressableButton
+          <button
             className="screen-back"
-            onPress={() => {
+            onClick={() => {
               if (state.step === 0) {
                 onNavigate({ view: 'home' })
               } else {
@@ -50,7 +49,7 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
             }}
           >
             ←
-          </PressableButton>
+          </button>
           <span className="screen-header__title">Drink Quiz</span>
         </div>
         <div className="screen-body">
@@ -63,13 +62,13 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
           <div className="quiz-question">{q.question}</div>
           <div className="quiz-options">
             {q.options.map((opt) => (
-              <PressableButton
+              <button
                 key={opt.value}
                 className="quiz-option"
-                onPress={() => handleAnswer(opt.value)}
+                onClick={() => handleAnswer(opt.value)}
               >
                 {opt.label}
-              </PressableButton>
+              </button>
             ))}
           </div>
         </div>
@@ -96,24 +95,24 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
         </div>
 
         {drink && (
-          <PressableButton className="btn-primary" onPress={() => onOrder(drink.id)}>
+          <button className="btn-primary" onClick={() => onOrder(drink.id)}>
             Order This Drink
-          </PressableButton>
+          </button>
         )}
-        <PressableButton
+        <button
           className="btn-secondary"
-          onPress={() =>
+          onClick={() =>
             setState({ phase: 'questions', step: 0, answers: {} })
           }
         >
           Take Quiz Again
-        </PressableButton>
-        <PressableButton className="btn-secondary" onPress={() => onNavigate({ view: 'menu' })}>
+        </button>
+        <button className="btn-secondary" onClick={() => onNavigate({ view: 'menu' })}>
           View Full Menu
-        </PressableButton>
-        <PressableButton className="btn-ghost" onPress={() => onNavigate({ view: 'home' })}>
+        </button>
+        <button className="btn-ghost" onClick={() => onNavigate({ view: 'home' })}>
           Back to Home
-        </PressableButton>
+        </button>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { PixiStage } from './pixi/PixiStage'
 import { UserNode } from './components/UserNode'
@@ -38,17 +38,12 @@ function MainView(): JSX.Element {
     rawTouchPoints: [],
     clusters: [],
   })
-  const [pixiHost, setPixiHost] = useState<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
   const demoDrinkOverridesRef = useRef(demoDrinkOverrides)
-
-  const handlePixiHostReady = useCallback((host: HTMLDivElement | null) => {
-    setPixiHost(host)
-  }, [])
 
   useEffect(() => {
     demoDrinkOverridesRef.current = demoDrinkOverrides
@@ -105,15 +100,15 @@ function MainView(): JSX.Element {
       }
     })
 
-    if (pixiHost) {
-      adapter.attach(pixiHost)
+    if (containerRef.current) {
+      adapter.attach(containerRef.current)
     }
 
     return () => {
       adapter.detach()
       dispatcherRef.current = null
     }
-  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster, pixiHost])
+  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster])
 
   // Toggle debug panel with 'D' key
   useEffect(() => {
@@ -269,7 +264,7 @@ function MainView(): JSX.Element {
       }}
     >
       {/* Layer 0: PixiJS canvas (standby ambient + coaster animations + game layer) */}
-      <PixiStage onHostReady={handlePixiHostReady} />
+      <PixiStage />
 
       {/* Layer 1: Game result overlay (shown after arrow/crown animation completes) */}
       <GameOverlay />

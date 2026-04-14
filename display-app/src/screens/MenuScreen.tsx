@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
-import { PressableButton } from '../components/PressableButton'
 import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
 import './screens.css'
 
@@ -138,13 +137,13 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuS
 
         <div className="menu-categories">
           {FILTER_OPTIONS.map((cat) => (
-            <PressableButton
+            <button
               key={cat}
               className={`menu-cat-btn${activeCategory === cat ? ' menu-cat-btn--active' : ''}`}
-              onPress={() => setActiveCategory(cat)}
+              onClick={() => setActiveCategory(cat)}
             >
               {CATEGORY_LABELS[cat]}
-            </PressableButton>
+            </button>
           ))}
         </div>
 
@@ -166,15 +165,15 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuS
               <div className="drink-card__footer">
                 <span className="drink-card__price">${drink.price}</span>
                 <div className="drink-card__actions">
-                  <PressableButton
+                  <button
                     className="btn-details"
-                    onPress={() => onNavigate({ view: 'detail', drinkId: drink.id })}
+                    onClick={() => onNavigate({ view: 'detail', drinkId: drink.id })}
                   >
                     Details
-                  </PressableButton>
-                  <PressableButton className="btn-order-sm" onPress={() => onOrder(drink.id)}>
+                  </button>
+                  <button className="btn-order-sm" onClick={() => onOrder(drink.id)}>
                     Order
-                  </PressableButton>
+                  </button>
                 </div>
               </div>
             </div>

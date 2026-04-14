@@ -1,7 +1,6 @@
 import { getDrinkById } from '../data/drinkCatalog'
 import type { Order, OrderStatus, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
-import { PressableButton } from '../components/PressableButton'
 import './screens.css'
 
 interface OrderStatusPanelProps {
@@ -30,16 +29,16 @@ export function OrderStatusPanel({ userColor: _userColor, orders, onNavigate }: 
   return (
     <div className="screen">
       <div className="screen-header">
-        <PressableButton className="screen-back" onPress={() => onNavigate({ view: 'home' })}>←</PressableButton>
+        <button className="screen-back" onClick={() => onNavigate({ view: 'home' })}>←</button>
         <span className="screen-header__title">Your Orders</span>
       </div>
       <div className="screen-body">
         {orders.length === 0 ? (
           <div className="orders-empty">
             <p>No orders yet.</p>
-            <PressableButton className="btn-primary" onPress={() => onNavigate({ view: 'menu' })}>
+            <button className="btn-primary" onClick={() => onNavigate({ view: 'menu' })}>
               Browse Menu
-            </PressableButton>
+            </button>
           </div>
         ) : (
           orders.map((order) => {
