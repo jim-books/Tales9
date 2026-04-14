@@ -22,7 +22,7 @@ Because this game relies on public performance, it transitions to a flat screen 
 - **Center Canvas:** The entire table flashes with a deep red ripple to visually announce the choice to the rest of the room.
 - **Edge Windows:** A random dare is pulled from the database. The exact text (e.g., *"Dare: Let the person to your left take a sip of your drink"*) is rendered right-side up on all four edges of the table. The entire group reads it and reacts at the exact same time.
 
-------
+---
 
 ### Game 2: King's Game / 國王遊戲 (The Blind Dealer Adaptation)
 
@@ -46,3 +46,48 @@ The classic King's Game requires the King to issue commands to secret numbers (e
 
 - **Center Canvas:** The darting lights suddenly freeze, locking bright halos under two specific, randomly chosen glasses.
 - **Edge Windows:** The text locks in on all four sides: *"The King has spoken! The [Apple Tart] and the [Momo Sour] must swap drinks!"*
+
+---
+
+Changes to the current prototype
+
+1. **Truth or dare**
+    - The player should be able to start a game on their “window”
+    - After the arrow picked someone, and the person decided “truth or dare”, can pick from
+        1. System suggesting questions & dare
+        2. Players decide
+    - and then start another round
+2. **King’s Game**
+    - The player should be able to start a game on their “window”
+    - King is picked (current animation)
+    - Reveal the hidden assigned numbers for each players, on their window/ around their coaster
+
+---
+
+Animation around coaster
+
+### 1. The Ingredient Orbit (The "Ecosystem" Mechanic)
+
+Building directly on your fruit idea, this turns every drink into its own little solar system.
+
+- **Idle (On the Table):** Small, stylized icons or particles representing the drink's specific ingredients (e.g., tiny minimalist apples, coffee beans, or glowing geometry representing "gin") slowly orbit the coaster.
+- **Approach (Getting Close):** As the drinks get closer, their gravitational pulls merge. The ingredients break their circular orbit and form a smooth "Figure-8" (infinity symbol), freely flowing back and forth between the two coasters.
+- **The Clink:** The Figure-8 speeds up rapidly, spinning the ingredients around the center point before flashing brightly.
+- **The Separation:** When the guests pull their drinks apart, the Figure-8 stretches and snaps. The ingredients rush back to their original coasters. **The Vibe detail:** One or two of the *other* drink's ingredients get "trapped" in the wrong orbit for a few seconds before slowly fading away, leaving a temporary visual memory of the interaction.
+
+| **Category** | **Drink Name** | **Sprite Icon 1** | **Sprite Icon 2** | **Sprite Icon 3** |
+| --- | --- | --- | --- | --- |
+| BAR CLASSICS | Tommy Collins | Rosemary sprig | Agave leaf | Oyster shell |
+| BAR CLASSICS | Peanut Butter Whiskey Sour | Peanut shell | Lemon slice | Chamomile flower |
+| BAR CLASSICS | Pisco-Colada | Pineapple chunk | Lime wedge | Half coconut |
+| BAR CLASSICS | Sakura Margarita (N/A) | Sakura petal | Peeled lychee | *(None)* |
+| BAR CLASSICS | Momo Sour | White peach | Dripping honeycomb | Lemon slice |
+| BAR CLASSICS | Toasted Longan Daiquiri | Longan fruit | Half coconut | Lime wedge |
+| COFFEE BASED | Barcode Choco Martini | Coffee bean | Chocolate square | Vanilla bean pod |
+| COFFEE BASED | Spiced Irish Coffee | Coffee bean | Cinnamon stick | Cream dollop |
+| COFFEE BASED | Star of Tonic | Yuzu fruit | Coffee bean | Fizzy bubbles |
+| DESSERT INSPIRED | Apple Tart | Caramelised apple | Vanilla bean pod | Cinnamon stick |
+| DESSERT INSPIRED | Mango Sticky Rice | Diced mango cube | Half coconut | Rice grain |
+| DESSERT INSPIRED | Pistachio Gelato | Cracked pistachio | Butter biscuit | *(None)* |
+| DESSERT INSPIRED | Strawberry Cheesecake | Strawberry | Cheese wedge/Cream | *(None)* |
+| DESSERT INSPIRED | Tangyuan | Tangyuan (rice ball) | Ginger root | Melon slice / Pear |
