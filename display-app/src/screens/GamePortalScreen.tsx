@@ -1,4 +1,5 @@
 import type { GameType, UserColor } from '../types'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface GamePortalScreenProps {
@@ -8,10 +9,12 @@ interface GamePortalScreenProps {
 }
 
 export function GamePortalScreen({ userColor: _userColor, onBack, onStartGame }: GamePortalScreenProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
+
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={onBack} aria-label="Back to home">
+        <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(onBack)} aria-label="Back to home">
           ←
         </button>
         <span className="screen-header__title" style={{ textAlign: 'center', flex: 1 }}>
@@ -28,7 +31,7 @@ export function GamePortalScreen({ userColor: _userColor, onBack, onStartGame }:
 
           <button
             className="game-portal__card"
-            onClick={() => onStartGame('truth_or_dare')}
+            {...makePressHandlers<HTMLButtonElement>(() => onStartGame('truth_or_dare'))}
           >
             <span className="game-portal__card-title">Truth or Dare</span>
             <span className="game-portal__card-sub">Spin, pick, and broadcast the challenge.</span>
@@ -36,7 +39,7 @@ export function GamePortalScreen({ userColor: _userColor, onBack, onStartGame }:
 
           <button
             className="game-portal__card"
-            onClick={() => onStartGame('kings_game')}
+            {...makePressHandlers<HTMLButtonElement>(() => onStartGame('kings_game'))}
           >
             <span className="game-portal__card-title">King&apos;s Game</span>
             <span className="game-portal__card-sub">Crown one player and execute a decree.</span>

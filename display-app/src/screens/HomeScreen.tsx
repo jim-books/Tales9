@@ -1,5 +1,6 @@
 import type { UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface HomeScreenProps {
@@ -59,6 +60,8 @@ const CARDS = [
 ]
 
 export function HomeScreen({ onNavigate }: HomeScreenProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
+
   return (
     <div className="home-screen">
       <div className="home-logo">
@@ -71,7 +74,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps): JSX.Element {
           <button
             key={card.view}
             className="home-card"
-            onClick={() => onNavigate({ view: card.view })}
+            {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: card.view }))}
           >
             <span className="home-card__icon">{card.icon}</span>
             <span className="home-card__text">

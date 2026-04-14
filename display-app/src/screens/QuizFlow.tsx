@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { quizQuestions, recommendDrink, getDrinkById } from '../data/drinkCatalog'
 import type { UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface QuizFlowProps {
@@ -20,6 +21,7 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
     step: 0,
     answers: {},
   })
+  const { makePressHandlers } = usePressAction()
 
   if (state.phase === 'questions') {
     const q = quizQuestions[state.step]
@@ -40,13 +42,13 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
         <div className="screen-header">
           <button
             className="screen-back"
-            onClick={() => {
+            {...makePressHandlers<HTMLButtonElement>(() => {
               if (state.step === 0) {
                 onNavigate({ view: 'home' })
               } else {
                 setState({ ...state, step: state.step - 1 })
               }
-            }}
+            })}
           >
             ←
           </button>
@@ -65,7 +67,7 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
               <button
                 key={opt.value}
                 className="quiz-option"
-                onClick={() => handleAnswer(opt.value)}
+                {...makePressHandlers<HTMLButtonElement>(() => handleAnswer(opt.value))}
               >
                 {opt.label}
               </button>
@@ -95,22 +97,22 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
         </div>
 
         {drink && (
-          <button className="btn-primary" onClick={() => onOrder(drink.id)}>
+          <button className="btn-primary" {...makePressHandlers<HTMLButtonElement>(() => onOrder(drink.id))}>
             Order This Drink
           </button>
         )}
         <button
           className="btn-secondary"
-          onClick={() =>
+          {...makePressHandlers<HTMLButtonElement>(() =>
             setState({ phase: 'questions', step: 0, answers: {} })
-          }
+          )}
         >
           Take Quiz Again
         </button>
-        <button className="btn-secondary" onClick={() => onNavigate({ view: 'menu' })}>
+        <button className="btn-secondary" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'menu' }))}>
           View Full Menu
         </button>
-        <button className="btn-ghost" onClick={() => onNavigate({ view: 'home' })}>
+        <button className="btn-ghost" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}>
           Back to Home
         </button>
       </div>

@@ -371,6 +371,11 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     e.stopPropagation()
   }, [])
 
+  const stopPanelTouchPropagation = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    // Panel interactions should not bubble into root-level coaster tracking.
+    e.stopPropagation()
+  }, [])
+
   const navigate = useCallback((s: PanelScreen) => setScreen(s), [])
 
   const renderScreen = (): React.ReactNode => {
@@ -491,8 +496,12 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             ...panelAnchorStyle,
             ...panelWrapperSize,
             zIndex: 1,
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           }}
+          onTouchStart={stopPanelTouchPropagation}
+          onTouchMove={stopPanelTouchPropagation}
+          onTouchEnd={stopPanelTouchPropagation}
+          onTouchCancel={stopPanelTouchPropagation}
         >
           <div
             style={{

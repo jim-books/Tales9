@@ -1,5 +1,6 @@
 import { getDrinkById } from '../data/drinkCatalog'
 import type { UserColor } from '../types'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface DrinkDetailModalProps {
@@ -17,17 +18,18 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBack }: DrinkDetailModalProps): JSX.Element {
   const drink = getDrinkById(drinkId)
+  const { makePressHandlers } = usePressAction()
 
   if (!drink) {
     return (
       <div className="screen">
         <div className="screen-header">
-          <button className="screen-back" onClick={onBack}>←</button>
+          <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(onBack)}>←</button>
           <span className="screen-header__title">Drink Details</span>
         </div>
         <div className="screen-body">
           <p style={{ color: 'var(--color-muted)', fontSize: 12 }}>Drink not found.</p>
-          <button className="btn-secondary" onClick={onBack}>Go Back</button>
+          <button className="btn-secondary" {...makePressHandlers<HTMLButtonElement>(onBack)}>Go Back</button>
         </div>
       </div>
     )
@@ -36,7 +38,7 @@ export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBa
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={onBack}>←</button>
+        <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(onBack)}>←</button>
         <span className="screen-header__title">Drink Details</span>
       </div>
       <div className="screen-body">
@@ -68,10 +70,10 @@ export function DrinkDetailModal({ drinkId, userColor: _userColor, onOrder, onBa
         <div className="detail-price">${drink.price}</div>
         <p className="detail-description">{drink.description}</p>
 
-        <button className="btn-primary" onClick={() => onOrder(drink.id)}>
+        <button className="btn-primary" {...makePressHandlers<HTMLButtonElement>(() => onOrder(drink.id))}>
           Order This Drink
         </button>
-        <button className="btn-ghost" onClick={onBack}>
+        <button className="btn-ghost" {...makePressHandlers<HTMLButtonElement>(onBack)}>
           ← Back to Menu
         </button>
       </div>

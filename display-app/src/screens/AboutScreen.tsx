@@ -1,4 +1,5 @@
 import type { UserColor } from '../types'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface AboutScreenProps {
@@ -22,10 +23,12 @@ const SECTIONS = [
 ]
 
 export function AboutScreen({ userColor: _userColor, onBack }: AboutScreenProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
+
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={onBack}>←</button>
+        <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(onBack)}>←</button>
         <span className="screen-header__title">About</span>
       </div>
       <div className="screen-body">

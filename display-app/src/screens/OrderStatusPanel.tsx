@@ -1,6 +1,7 @@
 import { getDrinkById } from '../data/drinkCatalog'
 import type { Order, OrderStatus, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface OrderStatusPanelProps {
@@ -26,17 +27,19 @@ const STATUS_DOT: Record<OrderStatus, DotClass> = {
 }
 
 export function OrderStatusPanel({ userColor: _userColor, orders, onNavigate }: OrderStatusPanelProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
+
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="screen-back" onClick={() => onNavigate({ view: 'home' })}>←</button>
+        <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}>←</button>
         <span className="screen-header__title">Your Orders</span>
       </div>
       <div className="screen-body">
         {orders.length === 0 ? (
           <div className="orders-empty">
             <p>No orders yet.</p>
-            <button className="btn-primary" onClick={() => onNavigate({ view: 'menu' })}>
+            <button className="btn-primary" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'menu' }))}>
               Browse Menu
             </button>
           </div>

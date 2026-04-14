@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
@@ -105,6 +105,24 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
 export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuScreenProps): JSX.Element {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL')
+  const suppressClickUntilRef = useRef(0)
+
+  const runFromPointerPress = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>, action: () => void): void => {
+      if (e.pointerType === 'mouse') return
+
+      suppressClickUntilRef.current = Date.now() + 450
+      action()
+      e.preventDefault()
+      e.stopPropagation()
+    },
+    [],
+  )
+
+  const runFromClick = useCallback((action: () => void): void => {
+    if (Date.now() < suppressClickUntilRef.current) return
+    action()
+  }, [])
 
   const filtered = drinkCatalog.filter((d) => {
     const matchesCat = activeCategory === 'ALL' || d.category === activeCategory
@@ -140,7 +158,8 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuS
             <button
               key={cat}
               className={`menu-cat-btn${activeCategory === cat ? ' menu-cat-btn--active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
+              onPointerUp={(e) => runFromPointerPress(e, () => setActiveCategory(cat))}
+              onClick={() => runFromClick(() => setActiveCategory(cat))}
             >
               {CATEGORY_LABELS[cat]}
             </button>
@@ -167,11 +186,24 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuS
                 <div className="drink-card__actions">
                   <button
                     className="btn-details"
-                    onClick={() => onNavigate({ view: 'detail', drinkId: drink.id })}
+                    onPointerUp={(e) =>
+                      runFromPointerPress(e, () =>
+                        onNavigate({ view: 'detail', drinkId: drink.id }),
+                      )
+                    }
+                    onClick={() =>
+                      runFromClick(() =>
+                        onNavigate({ view: 'detail', drinkId: drink.id }),
+                      )
+                    }
                   >
                     Details
                   </button>
-                  <button className="btn-order-sm" onClick={() => onOrder(drink.id)}>
+                  <button
+                    className="btn-order-sm"
+                    onPointerUp={(e) => runFromPointerPress(e, () => onOrder(drink.id))}
+                    onClick={() => runFromClick(() => onOrder(drink.id))}
+                  >
                     Order
                   </button>
                 </div>
