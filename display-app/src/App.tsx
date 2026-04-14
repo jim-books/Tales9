@@ -27,6 +27,13 @@ function MainView(): JSX.Element {
   const endGame = useAppStore((s) => s.endGame)
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [demoDrinkOverrides, setDemoDrinkOverrides] = useState<{
+    0: string
+    1: string
+  }>({
+    0: '',
+    1: '',
+  })
   const [frameDiagnosis, setFrameDiagnosis] = useState<FrameDiagnosis>({
     rawTouchPoints: [],
     clusters: [],
@@ -36,6 +43,11 @@ function MainView(): JSX.Element {
   const wsRef = useRef<WebSocket | null>(null)
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
+  const demoDrinkOverridesRef = useRef(demoDrinkOverrides)
+
+  useEffect(() => {
+    demoDrinkOverridesRef.current = demoDrinkOverrides
+  }, [demoDrinkOverrides])
 
   // Wire InputAdapter → TrackingEngine → store + AnimationDispatcher
   useEffect(() => {
@@ -64,6 +76,23 @@ function MainView(): JSX.Element {
 
       for (const event of frame.events) {
         if (event.type === 'confirmed') {
+          const coasterIdx =
+            event.coasterId === 'coaster-1'
+              ? 0
+              : event.coasterId === 'coaster-2'
+                ? 1
+                : null
+          const debugOverride =
+            coasterIdx === null ? '' : demoDrinkOverridesRef.current[coasterIdx]
+          const existingDrinkId = useAppStore
+            .getState()
+            .coasters.find((c) => c.id === event.coasterId)?.drinkId
+          const resolvedDrinkId = existingDrinkId || debugOverride || null
+
+          if (resolvedDrinkId) {
+            assignDrinkToCoaster(event.coasterId, resolvedDrinkId)
+            dispatcher.assignDrink(event.coasterId, resolvedDrinkId)
+          }
           dispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
         } else if (event.type === 'removed') {
           dispatcher.onCoasterRemoved(event.coasterId)
@@ -79,7 +108,7 @@ function MainView(): JSX.Element {
       adapter.detach()
       dispatcherRef.current = null
     }
-  }, [upsertCoaster, removeCoaster])
+  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster])
 
   // Toggle debug panel with 'D' key
   useEffect(() => {
@@ -103,6 +132,12 @@ function MainView(): JSX.Element {
   // G         → end game                    (replaces GAME_END)
   // D         → toggle debug panel
   const DEMO_DRINKS = ['pisco-colada', 'espresso-martini', 'momo-sour', 'apple-tart']
+  const DEMO_DRINK_OPTIONS = [
+    { id: 'apple-tart', label: 'Apple Tart' },
+    { id: 'pisco-colada', label: 'Pisco Colada' },
+    { id: 'espresso-martini', label: 'Espresso Martini' },
+    { id: 'momo-sour', label: 'Momo Sour' },
+  ]
   const DEMO_CENTROIDS = [
     { x: 475,  y: 950  }, // 1 — left
     { x: 950,  y: 475  }, // 2 — top
@@ -122,7 +157,8 @@ function MainView(): JSX.Element {
 
   const handleToggleCoaster = (idx: number) => {
     const id = `demo-coaster-${idx}`
-    const drinkId = DEMO_DRINKS[idx]
+    const overrideDrinkId = (idx === 0 || idx === 1) ? demoDrinkOverrides[idx] : ''
+    const drinkId = overrideDrinkId || DEMO_DRINKS[idx] || null
     const centroid = DEMO_CENTROIDS[idx]
     if (activeCoasterIdsRef.current.has(id)) {
       // Remove existing demo coaster
@@ -132,11 +168,20 @@ function MainView(): JSX.Element {
     } else {
       // Spawn demo coaster with drink pre-assigned
       upsertCoaster({ id, signature: makeSignature(centroid.x, centroid.y), centroid, detectionState: 'confirmed', drinkId })
-      assignDrinkToCoaster(id, drinkId)
-      dispatcherRef.current?.assignDrink(id, drinkId)
+      if (drinkId) {
+        assignDrinkToCoaster(id, drinkId)
+        dispatcherRef.current?.assignDrink(id, drinkId)
+      }
       dispatcherRef.current?.onCoasterConfirmed(id, centroid)
       activeCoasterIdsRef.current.add(id)
     }
+  }
+
+  const handleSetDemoDrinkOverride = (coasterIdx: 0 | 1, drinkId: string): void => {
+    setDemoDrinkOverrides((prev) => ({
+      ...prev,
+      [coasterIdx]: drinkId,
+    }))
   }
 
   useEffect(() => {
@@ -245,6 +290,9 @@ function MainView(): JSX.Element {
         <DebugPanel
           activeCoasterIds={activeCoasterIdsRef.current}
           frameDiagnosis={frameDiagnosis}
+          demoDrinkOptions={DEMO_DRINK_OPTIONS}
+          demoDrinkOverrides={demoDrinkOverrides}
+          onSetDemoDrinkOverride={handleSetDemoDrinkOverride}
           onStartSession={() => startSession(4)}
           onEndSession={() => endSession()}
           onToggleCoaster={handleToggleCoaster}

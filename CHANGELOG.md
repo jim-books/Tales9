@@ -26,6 +26,14 @@ Tracks implementation progress, decisions, and failed attempts for the Tales9 di
 - [x] `display-app/src/engine/CoasterTemplates.ts` — added `COASTER_MM_TO_TOUCH_UNITS` + `setCoasterMmToTouchUnits()` calibration hook for future Firebase/runtime config
 - [x] `display-app/src/engine/TrackingEngine.ts` — now reads templates through `getCoasterTemplates()` so runtime template specs can be replaced later (e.g. Firebase sync path)
 - [x] `display-app/src/__tests__/TrackingEngine.test.ts` — fixtures now generate geometry from C1/C2 side lengths using `COASTER_MM_TO_TOUCH_UNITS`, keeping tests aligned with side-length templates
+- [x] `display-app/src/engine/CoasterTemplates.ts` — updated C1/C2 default side lengths from actual debug-panel capture and set template-unit scale to `1/1900` (pixel-distance source)
+- [x] `display-app/src/__tests__/TrackingEngine.test.ts` — generalized fixture generation from `DEFAULT_COASTER_TEMPLATE_SPECS` so tests stay aligned when template side lengths change
+- [x] `display-app/src/engine/TrackingEngine.ts` — increased `CLUSTER_RADIUS` from `0.08` to `0.12` to support debug-observed coaster spreads (~180–202 px on 1900 canvas)
+- [x] `display-app/src/engine/CoasterTemplates.ts` — tuned C1/C2 to fitted medians from full capture set and set explicit per-template `ratioTolerance`, `maxSideScaleRange`, and `areaScaleRange`
+- [x] `display-app/src/engine/TrackingEngine.ts` — tuned `CLUSTER_RADIUS` from `0.12` to `0.13` based on full capture spread
+- [x] `display-app/src/App.tsx` + `src/components/DebugPanel.tsx` — added temporary demo-layer dropdown overrides (empty by default) for Coaster 1/2 animation mapping, while leaving backend/Firebase assignment flow untouched
+- [x] `display-app/src/App.tsx` — on real coaster confirmation (`coaster-1`/`coaster-2`), resolve animation drink as `existing assignment (Firebase/store)` first, otherwise debug dropdown override, then dispatch confirmed animation
+- [x] `display-app/src/components/DebugPanel.tsx` — clarified dropdown labels to `Tracked Coaster 1/2 animation override`
 
 ### In Progress
 - [x] Define coaster template catalog and shared detection lifecycle types
@@ -50,6 +58,7 @@ Total: 70/70
 ### Failed Attempts
 - `display-app/src/App.tsx` briefly had duplicated `upsertCoaster()` in demo toggle branch while migrating to `detectionState`. Removed duplicate immediately to avoid double writes.
 - Initial run after introducing mm-based template scaling failed in `TrackingEngine.test.ts` because old synthetic points were too small for new size windows; fixed by converting test fixtures to side-length-derived geometry.
+- After switching templates to debug-sized geometry, clustering failed because points no longer fit the legacy `CLUSTER_RADIUS=0.08`; fixed by raising radius to `0.12`.
 
 ### Blocked
 - None.

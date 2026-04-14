@@ -12,6 +12,9 @@ const stateGlyph = (state: 'preview' | 'confirmed' | 'inactive'): string =>
 export interface DebugPanelProps {
   activeCoasterIds: Set<string>
   frameDiagnosis: FrameDiagnosis
+  demoDrinkOptions: Array<{ id: string; label: string }>
+  demoDrinkOverrides: { 0: string; 1: string }
+  onSetDemoDrinkOverride: (coasterIdx: 0 | 1, drinkId: string) => void
   onStartSession: () => void
   onEndSession: () => void
   onToggleCoaster: (idx: number) => void
@@ -32,6 +35,9 @@ export interface DebugPanelProps {
 export function DebugPanel({
   activeCoasterIds,
   frameDiagnosis,
+  demoDrinkOptions,
+  demoDrinkOverrides,
+  onSetDemoDrinkOverride,
   onStartSession,
   onEndSession,
   onToggleCoaster,
@@ -152,6 +158,68 @@ export function DebugPanel({
 
       {/* Demo Coasters */}
       <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 6 }}>{'── Demo Layer (temporary) ──'}</div>
+        <div
+          style={{
+            marginBottom: 8,
+            padding: '8px 10px',
+            borderRadius: 6,
+            border: '1px solid #00ff8833',
+            background: 'rgba(0,255,136,0.04)',
+          }}
+        >
+          <div style={{ marginBottom: 6 }}>
+            {'Tracked Coaster 1 animation override'}
+          </div>
+          <select
+            value={demoDrinkOverrides[0]}
+            onChange={(e) => onSetDemoDrinkOverride(0, e.target.value)}
+            style={{
+              width: '100%',
+              background: 'rgba(0,0,0,0.75)',
+              color: '#00ff88',
+              border: '1px solid #00ff8866',
+              borderRadius: 4,
+              padding: '4px 6px',
+              fontFamily: 'monospace',
+              fontSize: 12,
+              marginBottom: 8,
+            }}
+          >
+            <option value="">(empty / backend assignment)</option>
+            {demoDrinkOptions.map((option) => (
+              <option key={`c1-${option.id}`} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <div style={{ marginBottom: 6 }}>
+            {'Tracked Coaster 2 animation override'}
+          </div>
+          <select
+            value={demoDrinkOverrides[1]}
+            onChange={(e) => onSetDemoDrinkOverride(1, e.target.value)}
+            style={{
+              width: '100%',
+              background: 'rgba(0,0,0,0.75)',
+              color: '#00ff88',
+              border: '1px solid #00ff8866',
+              borderRadius: 4,
+              padding: '4px 6px',
+              fontFamily: 'monospace',
+              fontSize: 12,
+            }}
+          >
+            <option value="">(empty / backend assignment)</option>
+            {demoDrinkOptions.map((option) => (
+              <option key={`c2-${option.id}`} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div style={{ marginBottom: 4 }}>{'── Demo Coasters (1–4) ──'}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           {DEMO_DRINKS.map((drink, idx) => {

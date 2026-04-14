@@ -15,7 +15,7 @@ import {
  */
 
 /** Maximum distance (in raw input units) for three points to be grouped as one coaster */
-const CLUSTER_RADIUS = 0.08 // normalised units
+const CLUSTER_RADIUS = 0.13 // normalised units (tuned from multi-sample debug captures)
 
 /** How long (ms) a coaster must be absent before it's considered removed */
 export const REMOVAL_DEBOUNCE_MS = 12_000
