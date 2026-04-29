@@ -11,6 +11,10 @@ import { AnimationDispatcher } from './engine/AnimationDispatcher'
 import { InputAdapter } from './engine/InputAdapter'
 import type { WsMessage, GameType } from './types'
 import type { FrameDiagnosis } from './engine/TrackingEngine'
+import {
+  listenToSession,
+  listenToCoasterAssignments,
+} from './services/firebaseService'
 import './App.css'
 
 function MainView(): JSX.Element {
@@ -25,6 +29,8 @@ function MainView(): JSX.Element {
   const removeCoaster = useAppStore((s) => s.removeCoaster)
   const startGame = useAppStore((s) => s.startGame)
   const endGame = useAppStore((s) => s.endGame)
+  const linkOrderToCoaster = useAppStore((s) => s.linkOrderToCoaster)
+  const arriveOrderByCoaster = useAppStore((s) => s.arriveOrderByCoaster)
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [demoDrinkOverrides, setDemoDrinkOverrides] = useState<{
@@ -94,6 +100,7 @@ function MainView(): JSX.Element {
             dispatcher.assignDrink(event.coasterId, resolvedDrinkId)
           }
           dispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
+          arriveOrderByCoaster(event.coasterId)
         } else if (event.type === 'removed') {
           dispatcher.onCoasterRemoved(event.coasterId)
         }
@@ -108,7 +115,7 @@ function MainView(): JSX.Element {
       adapter.detach()
       dispatcherRef.current = null
     }
-  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster, trackingSurface])
+  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster, arriveOrderByCoaster, trackingSurface])
 
   // Toggle debug panel with 'D' key
   useEffect(() => {
@@ -231,6 +238,7 @@ function MainView(): JSX.Element {
         } else if (msg.type === 'COASTER_ASSIGN') {
           assignDrinkToCoaster(msg.payload.coasterId, msg.payload.drinkId)
           dispatcherRef.current?.assignDrink(msg.payload.coasterId, msg.payload.drinkId)
+          linkOrderToCoaster(msg.payload.drinkId, msg.payload.coasterId)
         } else if (msg.type === 'GAME_START') {
           startGame(msg.payload.gameType)
         } else if (msg.type === 'GAME_END') {
@@ -249,7 +257,24 @@ function MainView(): JSX.Element {
       ws.close()
       wsRef.current = null
     }
-  }, [startSession, endSession, updateOrderStatus, assignDrinkToCoaster, startGame, endGame])
+  }, [startSession, endSession, updateOrderStatus, assignDrinkToCoaster, linkOrderToCoaster, startGame, endGame])
+
+  // Firestore listeners: session control + coaster assignments pushed from iOS
+  useEffect(() => {
+    const unsubSession = listenToSession(({ active, userCount }) => {
+      if (active) startSession(userCount)
+      else endSession()
+    })
+    const unsubAssign = listenToCoasterAssignments(({ coasterId, drinkId }) => {
+      assignDrinkToCoaster(coasterId, drinkId)
+      dispatcherRef.current?.assignDrink(coasterId, drinkId)
+      linkOrderToCoaster(drinkId, coasterId)
+    })
+    return () => {
+      unsubSession()
+      unsubAssign()
+    }
+  }, [startSession, endSession, assignDrinkToCoaster, linkOrderToCoaster])
 
   return (
     <div

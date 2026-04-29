@@ -55,17 +55,35 @@ final class MockAuraService: AuraService {
     func loadDrinks(for table: AuraTable) -> [Drink] {
         let base = BrandColors(primary: "#7D5FFF", secondary: "#F2A950", accent: "#FF6B6B", background: "#0B0B13")
         return [
-            Drink(id: UUID(), name: "Electric Paloma", description: "Grapefruit, tequila, citrus, saline", category: "Tequila", iconName: "sparkles", useBrandColors: false, colors: BrandColors(primary: "#FF7E5F", secondary: "#FEB47B", accent: "#FFE29F", background: base.background), animation: templateCatalog[1], showNameOnPlacement: true, displayDuration: 3, intensity: 0.8, speed: 0.7),
-            Drink(id: UUID(), name: "Midnight Old Fashioned", description: "Smoked bourbon, demerara, bitters", category: "Whiskey", iconName: "flame.fill", useBrandColors: false, colors: BrandColors(primary: "#F6C177", secondary: "#B07D62", accent: "#D36135", background: base.background), animation: templateCatalog[0], showNameOnPlacement: false, displayDuration: 2, intensity: 0.6, speed: 0.5),
-            Drink(id: UUID(), name: "Cucumber Cooler", description: "Gin, cucumber, mint, soda", category: "Gin", iconName: "leaf.fill", useBrandColors: true, colors: base, animation: templateCatalog[3], showNameOnPlacement: true, displayDuration: 4, intensity: 0.5, speed: 0.6)
+            Drink(id: UUID(), catalogId: "pisco-colada", name: "Pisco Colada",
+                  description: "Light, tropical and refreshing", category: "Signature",
+                  iconName: "tropicalstorm", useBrandColors: false,
+                  colors: BrandColors(primary: "#00C9A7", secondary: "#6FEADB", accent: "#FFF176", background: base.background),
+                  animation: templateCatalog[1], showNameOnPlacement: true, displayDuration: 3, intensity: 0.8, speed: 0.7),
+            Drink(id: UUID(), catalogId: "espresso-martini", name: "Espresso Martini",
+                  description: "Bold espresso with vodka and coffee liqueur", category: "Classics",
+                  iconName: "cup.and.saucer.fill", useBrandColors: false,
+                  colors: BrandColors(primary: "#4A2C0A", secondary: "#C68642", accent: "#F5DEB3", background: base.background),
+                  animation: templateCatalog[0], showNameOnPlacement: true, displayDuration: 3, intensity: 0.9, speed: 0.6),
+            Drink(id: UUID(), catalogId: "momo-sour", name: "Momo Sour",
+                  description: "Energetic citrus sour with peach", category: "Signature",
+                  iconName: "flame.fill", useBrandColors: false,
+                  colors: BrandColors(primary: "#FF6B35", secondary: "#F7C59F", accent: "#EFEFD0", background: base.background),
+                  animation: templateCatalog[2], showNameOnPlacement: true, displayDuration: 3, intensity: 0.8, speed: 0.8),
+            Drink(id: UUID(), catalogId: "apple-tart", name: "Apple Tart",
+                  description: "Elegant apple and tart lemon with gin", category: "Dessert Inspired",
+                  iconName: "leaf.fill", useBrandColors: false,
+                  colors: BrandColors(primary: "#8DB48E", secondary: "#C8E6C9", accent: "#FFF9C4", background: base.background),
+                  animation: templateCatalog[3], showNameOnPlacement: true, displayDuration: 4, intensity: 0.6, speed: 0.5),
         ]
     }
 
     func loadCoasters(for table: AuraTable, drinks: [Drink]) -> [Coaster] {
         [
-            Coaster(id: UUID(), code: "C01", label: "Red dot", assignedDrinkId: drinks.first?.id, lastSeen: Date(), positionDescription: "Front left"),
-            Coaster(id: UUID(), code: "C02", label: "Blue slash", assignedDrinkId: drinks.dropFirst().first?.id, lastSeen: Date().addingTimeInterval(-600), positionDescription: "Front right"),
-            Coaster(id: UUID(), code: "C03", label: "Green circle", assignedDrinkId: nil, lastSeen: nil, positionDescription: nil)
+            Coaster(id: UUID(), code: "coaster-1", label: "Large triangle",
+                    assignedDrinkId: nil, lastSeen: nil, positionDescription: "Coaster 1"),
+            Coaster(id: UUID(), code: "coaster-2", label: "Small triangle",
+                    assignedDrinkId: nil, lastSeen: nil, positionDescription: "Coaster 2"),
         ]
     }
 

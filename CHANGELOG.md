@@ -309,6 +309,64 @@ Total: 66/66
 
 ---
 
+## Session: 2026-04-29
+
+### Completed — MVP End-to-End Demo Flow
+
+- [x] `Websocket Demo/demo-ws-server.js` — extended relay to broadcast all message types (was CONFIG_UPDATE + SUBMIT_ORDER only); now caches SESSION_START for new-connection replay; SUBMIT_ORDER remains sender-excluded
+- [x] `display-app/package.json` — added `firebase` dependency
+- [x] `display-app/src/services/firebaseService.ts` — NEW: lazy Firebase init; `writeOrderToFirestore()` writes orders to `venues/demo/orders/{id}`; `listenToSession()` subscribes to `venues/demo/session/current`; `listenToCoasterAssignments()` subscribes to `venues/demo/coasterAssignments/` collection
+- [x] `display-app/src/store/useAppStore.ts` — `addOrder()` now fire-and-forgets `writeOrderToFirestore()` so orders appear on iOS; added `linkOrderToCoaster(drinkId, coasterId)` FIFO action that ties a pending order to its assigned coaster; added `arriveOrderByCoaster(coasterId)` action that advances the linked order to `arrived`
+- [x] `display-app/src/App.tsx` — added Firestore listener `useEffect` for session control (start/end) and coaster assignments from iOS; COASTER_ASSIGN WebSocket handler also calls `linkOrderToCoaster`; confirmed coaster event now calls `arriveOrderByCoaster` so guest panel updates to "YOUR DRINK HAS ARRIVED"
+- [x] `display-app/src/__tests__/useAppStore.test.ts` — added `vi.mock` for firebaseService; added 6 new tests covering `linkOrderToCoaster` (FIFO link, wrong-drink no-op, multiple orders) and `arriveOrderByCoaster` (success, idempotent, no-match no-op)
+- [x] `SmartTableAI (Bartender)/SmartTableAI/Models.swift` — added `catalogId: String` to `Drink` struct; maps to display-app drinkCatalog.ts slugs (e.g. `"pisco-colada"`)
+- [x] `SmartTableAI (Bartender)/SmartTableAI/MockAuraService.swift` — replaced mock drinks with the four Tales9 catalog drinks (pisco-colada, espresso-martini, momo-sour, apple-tart) including correct `catalogId`; replaced mock coasters with `coaster-1` / `coaster-2` codes matching display-app template IDs
+- [x] `SmartTableAI (Bartender)/SmartTableAI/DemoSyncClient.swift` — added `assignedCoasters: [String: String]` UI state; added `sendSession(active:userCount:)` writing to `venues/demo/session/current`; added `sendCoasterAssignment(coasterId:drinkId:)` writing to `venues/demo/coasterAssignments/{coasterId}`; `clearOrders()` now also resets assignment state
+- [x] `SmartTableAI (Bartender)/SmartTableAI/ContentView.swift` — `DemoSyncView`: added Table Session section (user count stepper + Start/End Session buttons); enhanced orders section with per-order coaster picker that calls `sendCoasterAssignment`; retained legacy config-send section for ambient control
+- [x] `SmartTableAI (Bartender)/SmartTableAI/AppViewModel.swift` — `@MainActor` isolation for UI state; `restartTable()` uses `Task.sleep` instead of `DispatchQueue.main.asyncAfter`
+- [x] `SmartTableAI (Bartender)/SmartTableAI/DemoSyncClient.swift` — `@MainActor` isolation; `ordersListener` stored as `nonisolated(unsafe)` so `deinit` can remove the Firestore listener off the main actor
+- [x] `SmartTableAI (Bartender)/SmartTableAI/ContentView.swift` — removed duplicate `discoverTables()` from root `onAppear`; VoiceOver labels for icon-only refresh and destructive trash actions; dashboard telemetry `LazyVGrid` for Dynamic Type; preview simulation table `contentShape`, `accessibilityAction` for center placement, `addSimulatedCoaster`; `DrinkEditor` default drink + Basics field for `catalogId` (display-app slug)
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        8 tests
+✓ AnimationDispatcher.test.ts  10 tests
+✓ useAppStore.test.ts          23 tests  (+6 new)
+✓ UserNode.test.tsx            11 tests
+✓ SpriteRegistry.test.ts       25 tests
+✓ drinkMenuMedia.test.ts        1 test
+✓ GameOverlay.test.tsx          2 tests
+Total: 93/93
+```
+
+- [x] `npm run build` clean (`tsc -b && vite build`; pre-existing >500 kB chunk warning only)
+
+### ID Alignment (single source of truth)
+| Printed # | TrackingEngine ID | iOS Coaster.code | Firestore doc | drinkId slug |
+|---|---|---|---|---|
+| 1 | `coaster-1` | `coaster-1` | `coaster-1` | catalog slug |
+| 2 | `coaster-2` | `coaster-2` | `coaster-2` | catalog slug |
+
+### Firestore Paths Added
+- `venues/demo/session/current` — `{ active, userCount, updatedAt }` written by iOS, listened by display app
+- `venues/demo/coasterAssignments/{coasterId}` — `{ drinkId, updatedAt }` written by iOS, listened by display app
+- `venues/demo/orders/{orderId}` — `{ drinkId, drinkName, userId, status, timestamp }` written by display app, listened by existing iOS `DemoSyncClient`
+
+### Demo Rehearsal Checklist
+1. Start WS server: `cd "Websocket Demo" && node demo-ws-server.js`
+2. Start display app: `cd display-app && npm run dev`
+3. iOS: Demo Sync tab → set user count → Start Session → User Nodes appear on display
+4. Display: open a User Node panel → Menu → ORDER a drink → order appears in iOS orders list
+5. iOS: tap order's coaster picker → select "Coaster 1" → `venues/demo/coasterAssignments/coaster-1` written
+6. Place physical Coaster 1 on table → tracking confirms → correct drink animation plays → guest panel shows "YOUR DRINK HAS ARRIVED"
+
+### Blocked
+- None.
+
+---
+
 <!-- New entries go here, newest first. Format:
 
 ## Session: YYYY-MM-DD

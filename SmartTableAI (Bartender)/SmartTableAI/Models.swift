@@ -72,6 +72,7 @@ struct AnimationTemplate: Identifiable, Hashable, Codable {
 
 struct Drink: Identifiable, Hashable, Codable {
     let id: UUID
+    var catalogId: String   // matches display-app drinkCatalog.ts slugs (e.g. "pisco-colada")
     var name: String
     var description: String
     var category: String

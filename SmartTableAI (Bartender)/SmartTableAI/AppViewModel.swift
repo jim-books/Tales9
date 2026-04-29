@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Observation
 
+@MainActor
 @Observable
 final class AppViewModel {
     var discoveredTables: [AuraTable] = []
@@ -137,9 +138,10 @@ final class AppViewModel {
 
     func restartTable() {
         reconnecting = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.reconnecting = false
-            self.refreshTelemetry()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            reconnecting = false
+            refreshTelemetry()
         }
     }
 

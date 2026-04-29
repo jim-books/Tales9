@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAppStore } from '../store/useAppStore'
+
+vi.mock('../services/firebaseService', () => ({
+  writeOrderToFirestore: vi.fn().mockResolvedValue(undefined),
+  listenToSession: vi.fn().mockReturnValue(() => {}),
+  listenToCoasterAssignments: vi.fn().mockReturnValue(() => {}),
+}))
 
 beforeEach(() => {
   // Reset store to initial state before each test
@@ -154,5 +160,80 @@ describe('useAppStore', () => {
     useAppStore.getState().startGame('kings_game')
     useAppStore.getState().endGame()
     expect(useAppStore.getState().gameState).toBeNull()
+  })
+
+  // ── linkOrderToCoaster ────────────────────────────────────────────────────
+
+  it('linkOrderToCoaster sets coasterId on first unlinked order for the drink', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-a', userId: 'user-0', drinkId: 'pisco-colada',
+      status: 'pending', coasterId: null, createdAt: 0,
+    })
+    useAppStore.getState().linkOrderToCoaster('pisco-colada', 'coaster-1')
+    const order = useAppStore.getState().orders.find((o) => o.id === 'ord-a')
+    expect(order?.coasterId).toBe('coaster-1')
+  })
+
+  it('linkOrderToCoaster does not affect orders for a different drink', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-b', userId: 'user-0', drinkId: 'momo-sour',
+      status: 'pending', coasterId: null, createdAt: 0,
+    })
+    useAppStore.getState().linkOrderToCoaster('pisco-colada', 'coaster-1')
+    const order = useAppStore.getState().orders.find((o) => o.id === 'ord-b')
+    expect(order?.coasterId).toBeNull()
+  })
+
+  it('linkOrderToCoaster only links the first unlinked order when multiple exist', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-c1', userId: 'user-0', drinkId: 'espresso-martini',
+      status: 'pending', coasterId: null, createdAt: 0,
+    })
+    useAppStore.getState().addOrder({
+      id: 'ord-c2', userId: 'user-0', drinkId: 'espresso-martini',
+      status: 'pending', coasterId: null, createdAt: 1,
+    })
+    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-2')
+    const orders = useAppStore.getState().orders
+    expect(orders.find((o) => o.id === 'ord-c1')?.coasterId).toBe('coaster-2')
+    expect(orders.find((o) => o.id === 'ord-c2')?.coasterId).toBeNull()
+  })
+
+  // ── arriveOrderByCoaster ──────────────────────────────────────────────────
+
+  it('arriveOrderByCoaster sets status to arrived for the linked order', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-d', userId: 'user-0', drinkId: 'apple-tart',
+      status: 'preparing', coasterId: 'coaster-1', createdAt: 0,
+    })
+    useAppStore.getState().arriveOrderByCoaster('coaster-1')
+    const order = useAppStore.getState().orders.find((o) => o.id === 'ord-d')
+    expect(order?.status).toBe('arrived')
+  })
+
+  it('arriveOrderByCoaster does not downgrade an already-arrived order', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-e', userId: 'user-0', drinkId: 'momo-sour',
+      status: 'arrived', coasterId: 'coaster-2', createdAt: 0,
+    })
+    useAppStore.getState().arriveOrderByCoaster('coaster-2')
+    const order = useAppStore.getState().orders.find((o) => o.id === 'ord-e')
+    expect(order?.status).toBe('arrived')
+  })
+
+  it('arriveOrderByCoaster is a no-op when no order is linked to that coaster', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-f', userId: 'user-0', drinkId: 'pisco-colada',
+      status: 'pending', coasterId: null, createdAt: 0,
+    })
+    useAppStore.getState().arriveOrderByCoaster('coaster-1')
+    const order = useAppStore.getState().orders.find((o) => o.id === 'ord-f')
+    expect(order?.status).toBe('pending')
   })
 })

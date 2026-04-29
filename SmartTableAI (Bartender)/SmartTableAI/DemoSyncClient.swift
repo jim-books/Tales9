@@ -15,13 +15,16 @@ struct KioskOrder: Identifiable {
     let timestamp: Date
 }
 
+@MainActor
 @Observable
 final class DemoSyncClient {
     var isFirebaseReady: Bool = true
     var ordersReceived: [KioskOrder] = []
+    var assignedCoasters: [String: String] = [:]  // drinkId → coasterId (UI state)
 
     private let db = Firestore.firestore()
-    private var ordersListener: ListenerRegistration?
+    /// Firebase callbacks are off the main actor; keep registration out of actor isolation so `deinit` can remove it.
+    nonisolated(unsafe) private var ordersListener: ListenerRegistration?
 
     init() {
         startOrdersListener()
@@ -32,7 +35,44 @@ final class DemoSyncClient {
     }
 
     func clearOrders() {
+        let batch = db.batch()
+        for order in ordersReceived {
+            let ref = db.collection("venues").document("demo")
+                        .collection("orders").document(order.id)
+            batch.deleteDocument(ref)
+        }
+        batch.commit { _ in }
         ordersReceived.removeAll()
+        assignedCoasters.removeAll()
+    }
+
+    // Writes session state to venues/demo/session/current so the display app reacts.
+    func sendSession(active: Bool, userCount: Int = 0) {
+        let ref = db.collection("venues").document("demo")
+                    .collection("session").document("current")
+        ref.setData([
+            "active": active,
+            "userCount": userCount,
+            "updatedAt": Timestamp(date: Date())
+        ], merge: true) { [weak self] error in
+            if error != nil {
+                DispatchQueue.main.async { self?.isFirebaseReady = false }
+            }
+        }
+    }
+
+    // Writes a coaster→drink assignment to venues/demo/coasterAssignments/{coasterId}.
+    func sendCoasterAssignment(coasterId: String, drinkId: String) {
+        let ref = db.collection("venues").document("demo")
+                    .collection("coasterAssignments").document(coasterId)
+        ref.setData([
+            "drinkId": drinkId,
+            "updatedAt": Timestamp(date: Date())
+        ], merge: true) { [weak self] error in
+            if error != nil {
+                DispatchQueue.main.async { self?.isFirebaseReady = false }
+            }
+        }
     }
 
     func sendConfig(animationType: String, topBarName: String, color: String) {

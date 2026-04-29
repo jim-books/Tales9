@@ -36,9 +36,6 @@ struct ContentView: View {
                 }
             }
         }
-        .onAppear {
-            model.discoverTables()
-        }
     }
 }
 
@@ -107,6 +104,7 @@ private struct DiscoveryList: View {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .labelStyle(.iconOnly)
+                .accessibilityLabel("Refresh discovered tables")
             }
 
             if model.discoveredTables.isEmpty {
@@ -375,7 +373,7 @@ private struct DashboardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                HStack(spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
                     StatCard(title: "Drinks", value: "\(model.telemetry.drinkCount)", icon: "cup.and.saucer.fill")
                     StatCard(title: "Coasters", value: "\(model.telemetry.coasterCount)", icon: "circle.hexagonpath")
                     StatCard(title: "Uptime", value: "\(Int(model.telemetry.uptimeHours))h", icon: "clock")
@@ -550,6 +548,7 @@ private struct BrandEditorView: View {
                             } label: {
                                 Image(systemName: "trash")
                             }
+                            .accessibilityLabel("Delete preset \(preset.venueName)")
                         }
                     }
                 }
@@ -626,6 +625,7 @@ private struct DrinksView: View {
                             } label: {
                                 Image(systemName: "trash")
                             }
+                            .accessibilityLabel("Delete \(drink.name)")
                         }
                     }
                     .padding(.vertical, 6)
@@ -672,7 +672,7 @@ private struct DrinkEditor: View {
     var onSave: (Drink) -> Void
 
     init(drink: Drink?, templates: [AnimationTemplate], onSave: @escaping (Drink) -> Void) {
-        _draft = State(initialValue: drink ?? Drink(id: UUID(), name: "New Drink", description: "", category: "Signature", iconName: "sparkles", useBrandColors: true, colors: BrandColors(primary: "#7D5FFF", secondary: "#F2A950", accent: "#FF6B6B", background: "#0B0B13"), animation: templates.first ?? AnimationTemplate(id: "A01", name: "Pulse", description: "", parameters: [:]), showNameOnPlacement: true, displayDuration: 3, intensity: 0.6, speed: 0.5))
+        _draft = State(initialValue: drink ?? Drink(id: UUID(), catalogId: "", name: "New Drink", description: "", category: "Signature", iconName: "sparkles", useBrandColors: true, colors: BrandColors(primary: "#7D5FFF", secondary: "#F2A950", accent: "#FF6B6B", background: "#0B0B13"), animation: templates.first ?? AnimationTemplate(id: "A01", name: "Pulse", description: "", parameters: [:]), showNameOnPlacement: true, displayDuration: 3, intensity: 0.6, speed: 0.5))
         self.templates = templates
         self.onSave = onSave
     }
@@ -682,6 +682,12 @@ private struct DrinkEditor: View {
             Form {
                 Section("Basics") {
                     TextField("Name", text: $draft.name)
+                    TextField("Catalog ID", text: $draft.catalogId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Text("Slug matching display-app drink catalog (e.g. pisco-colada).")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     TextField("Description", text: $draft.description)
                     TextField("Category", text: $draft.category)
                     TextField("SF Symbol icon", text: $draft.iconName)
@@ -801,7 +807,7 @@ private struct PreviewSimulationView: View {
                             Circle()
                                 .fill(Color.blue.opacity(0.8))
                                 .frame(width: 36, height: 36)
-                                .overlay(Text(sim.name.prefix(2)).foregroundColor(.white))
+                                .overlay(Text(sim.name.prefix(2)).foregroundStyle(.white))
                             if let drink = model.drinks.first(where: { $0.id == sim.drinkId }) {
                                 Text(drink.name).font(.caption).foregroundStyle(.secondary)
                             }
@@ -809,15 +815,22 @@ private struct PreviewSimulationView: View {
                         .position(point)
                     }
                 }
+                .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onEnded { value in
                             let location = value.location
+                            guard geo.size.width > 0, geo.size.height > 0 else { return }
                             let normalized = CGPoint(x: location.x / geo.size.width, y: location.y / geo.size.height)
-                            let sim = SimulatedCoaster(id: UUID(), name: "Sim", drinkId: selectedDrinkId ?? model.drinks.first?.id, position: normalized, rotation: 0)
-                            model.simulate(coaster: sim)
+                            addSimulatedCoaster(normalized: normalized)
                         }
                 )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Simulation table")
+                .accessibilityHint("Double-tap to add a test coaster at the center.")
+                .accessibilityAction {
+                    addSimulatedCoaster(normalized: CGPoint(x: 0.5, y: 0.5))
+                }
             }
             .frame(height: 300)
             Text("Tap the table to simulate coaster placement and send test animations.")
@@ -825,6 +838,17 @@ private struct PreviewSimulationView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
         }
+    }
+
+    private func addSimulatedCoaster(normalized: CGPoint) {
+        let sim = SimulatedCoaster(
+            id: UUID(),
+            name: "Sim",
+            drinkId: selectedDrinkId ?? model.drinks.first?.id,
+            position: normalized,
+            rotation: 0
+        )
+        model.simulate(coaster: sim)
     }
 }
 
@@ -834,29 +858,32 @@ private struct DemoSyncView: View {
     @State private var demoAnimationTypeId: String = "A01"
     @State private var demoTopBarName: String = "BARCODE"
     @State private var demoColor: String = "#7D5FFF"
+    @State private var sessionUserCount: Int = 2
 
     var body: some View {
         Form {
             Section {
-                Text("Using Firebase. Config and orders sync in real time.")
+                Text("Firebase syncs session, orders, and coaster assignments in real time.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Section("Send to table") {
-                Picker("Animation Type", selection: $demoAnimationTypeId) {
-                    ForEach(model.serviceTemplates) { template in
-                        Text("\(template.name) (\(template.id))").tag(template.id)
-                    }
-                }
-                TextField("Top Bar name", text: $demoTopBarName)
-                ColorRow(title: "Color", value: $demoColor)
-                Button("Send to table") {
-                    let name = model.serviceTemplates.first(where: { $0.id == demoAnimationTypeId })?.name ?? demoAnimationTypeId
-                    client.sendConfig(animationType: name, topBarName: demoTopBarName, color: demoColor)
+
+            // ── Session control ───────────────────────────────────────────────
+            Section("Table Session") {
+                Stepper("Users: \(sessionUserCount)", value: $sessionUserCount, in: 1...4)
+                Button("Start Session") {
+                    client.sendSession(active: true, userCount: sessionUserCount)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!client.isFirebaseReady)
+
+                Button("End Session", role: .destructive) {
+                    client.sendSession(active: false)
+                }
+                .disabled(!client.isFirebaseReady)
             }
+
+            // ── Orders + coaster assignment ───────────────────────────────────
             Section {
                 HStack {
                     Text("Orders from kiosk")
@@ -873,22 +900,55 @@ private struct DemoSyncView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(client.ordersReceived) { order in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(order.drinkName)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Text(order.timestamp, style: .time)
-                                    .font(.caption)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(order.drinkName)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Text(order.timestamp, style: .time)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "cup.and.saucer.fill")
                                     .foregroundStyle(.secondary)
                             }
-                            Spacer()
-                            Image(systemName: "cup.and.saucer.fill")
-                                .foregroundStyle(.secondary)
+                            // Coaster assignment picker — sends COASTER_ASSIGN to Firestore
+                            Picker("Assign to coaster", selection: Binding(
+                                get: { client.assignedCoasters[order.drinkId] },
+                                set: { newCode in
+                                    guard let code = newCode else { return }
+                                    client.sendCoasterAssignment(coasterId: code, drinkId: order.drinkId)
+                                    client.assignedCoasters[order.drinkId] = code
+                                }
+                            )) {
+                                Text("— assign coaster —").tag(String?.none)
+                                Text("Coaster 1 (large triangle)").tag(String?.some("coaster-1"))
+                                Text("Coaster 2 (small triangle)").tag(String?.some("coaster-2"))
+                            }
+                            .pickerStyle(.menu)
                         }
                         .padding(.vertical, 4)
                     }
                 }
+            }
+
+            // ── Legacy config send (kept for ambient animation control) ───────
+            Section("Send config to table") {
+                Picker("Animation Type", selection: $demoAnimationTypeId) {
+                    ForEach(model.serviceTemplates) { template in
+                        Text("\(template.name) (\(template.id))").tag(template.id)
+                    }
+                }
+                TextField("Top Bar name", text: $demoTopBarName)
+                ColorRow(title: "Color", value: $demoColor)
+                Button("Send to table") {
+                    let name = model.serviceTemplates.first(where: { $0.id == demoAnimationTypeId })?.name ?? demoAnimationTypeId
+                    client.sendConfig(animationType: name, topBarName: demoTopBarName, color: demoColor)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!client.isFirebaseReady)
             }
         }
         .navigationTitle("Demo Sync")

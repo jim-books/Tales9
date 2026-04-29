@@ -10,6 +10,7 @@ import type {
   Point,
   OrderStatus,
 } from '../types'
+import { writeOrderToFirestore } from '../services/firebaseService'
 
 const USER_COLORS: UserColor[] = ['blue', 'green', 'orange', 'purple']
 
@@ -68,6 +69,8 @@ interface AppState {
 
   addOrder: (order: Order) => void
   updateOrderStatus: (orderId: string, status: OrderStatus) => void
+  linkOrderToCoaster: (drinkId: string, coasterId: string) => void
+  arriveOrderByCoaster: (coasterId: string) => void
 
   setGameState: (game: GameState | null) => void
   startGame: (type: GameType) => void
@@ -175,11 +178,37 @@ export const useAppStore = create<AppState>((set) => ({
       ),
     })),
 
-  addOrder: (order) => set((s) => ({ orders: [...s.orders, order] })),
+  addOrder: (order) => {
+    set((s) => ({ orders: [...s.orders, order] }))
+    void writeOrderToFirestore(order)
+  },
 
   updateOrderStatus: (orderId, status) =>
     set((s) => ({
       orders: s.orders.map((o) => (o.id === orderId ? { ...o, status } : o)),
+    })),
+
+  linkOrderToCoaster: (drinkId, coasterId) =>
+    set((s) => {
+      let linked = false
+      return {
+        orders: s.orders.map((o) => {
+          if (!linked && o.drinkId === drinkId && o.coasterId === null) {
+            linked = true
+            return { ...o, coasterId }
+          }
+          return o
+        }),
+      }
+    }),
+
+  arriveOrderByCoaster: (coasterId) =>
+    set((s) => ({
+      orders: s.orders.map((o) =>
+        o.coasterId === coasterId && o.status !== 'arrived'
+          ? { ...o, status: 'arrived' as const }
+          : o,
+      ),
     })),
 
   setGameState: (gameState) => set({ gameState }),
