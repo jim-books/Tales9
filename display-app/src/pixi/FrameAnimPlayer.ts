@@ -93,8 +93,10 @@ export class FrameAnimPlayer {
   private readonly stateMachine = new AnimStateMachine()
   private walkingMounted = false
 
-  constructor(def: SpriteAnimDef, container: Container) {
+  constructor(def: SpriteAnimDef, container: Container, initialEdge: WalkEdge = 'bottom') {
     this.container = container
+
+    const { scaleX: fScaleX, rotation: fRotation } = orientationForEdge(initialEdge)
 
     const loopHandler = (): void => {
       this.stateMachine.onLoop()
@@ -127,6 +129,8 @@ export class FrameAnimPlayer {
       this.fallWaitSprite.animationSpeed = waitDef.animationSpeed
       this.fallWaitSprite.anchor.set(0.5, 1.0)
       this.fallWaitSprite.scale.set(def.scale)
+      this.fallWaitSprite.scale.x = Math.abs(this.fallWaitSprite.scale.x) * fScaleX
+      this.fallWaitSprite.rotation = fRotation
       this.fallWaitSprite.loop = true
       this.fallWaitSprite.onLoop = loopHandler
     } else {
@@ -138,6 +142,9 @@ export class FrameAnimPlayer {
     this.fallSprite.animationSpeed = def.fall.animationSpeed
     this.fallSprite.anchor.set(0.5, 1.0)
     this.fallSprite.scale.set(def.scale)
+    // Orient fall/wait sprites toward the target edge so frames face the fall direction
+    this.fallSprite.scale.x = Math.abs(this.fallSprite.scale.x) * fScaleX
+    this.fallSprite.rotation = fRotation
     this.fallSprite.loop = true  // onLoop fires each cycle; we stop externally
     this.fallSprite.onLoop = loopHandler
     this.fallSprite.play()

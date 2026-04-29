@@ -309,6 +309,42 @@ Total: 66/66
 
 ---
 
+## Session: 2026-04-29 (continued)
+
+### Completed — Fall Fix + Order Burst + Ambient Preview
+
+- [x] `display-app/src/pixi/FrameAnimPlayer.ts` — added `initialEdge: WalkEdge = 'bottom'` param to constructor; applies `orientationForEdge(initialEdge)` to both `fallSprite` and `fallWaitSprite` at construction so fall animation frames face the correct canvas edge (fix for live demo bug: "I forgot to change the variables")
+- [x] `display-app/src/pixi/IngredientSprite.ts` — passes `this.edge` to `FrameAnimPlayer` constructor so fall orientation matches the detected nearest edge
+- [x] `display-app/src/store/useAppStore.ts` — added `orderBurst: { x, y, colorHex } | null` state, `triggerOrderBurst()` and `clearOrderBurst()` actions
+- [x] `display-app/src/components/UserNode.tsx` — `handleOrder` now calls `triggerOrderBurst()` with the node's canvas position and per-user color hex after placing an order
+- [x] `display-app/src/pixi/AmbientPreviewLayer.ts` — NEW: 30-particle network ambient animation (drifting particles + connecting lines, amber/gold palette); "DESIGN PREVIEW" label on-canvas; ticker-driven; mount/unmount/destroy lifecycle
+- [x] `display-app/src/pixi/PixiStage.tsx` — added `showAmbientPreview` prop; subscribes to `orderBurst` and spawns 3-ring expanding burst animation in user color (~2s, auto-clears via `useAppStore.getState().clearOrderBurst()`); mounts/destroys `AmbientPreviewLayer` on prop change
+- [x] `display-app/src/components/DebugPanel.tsx` — added `showAmbientPreview` + `onToggleAmbientPreview` props; toggle button labeled "Ambient Preview (placeholder)" in Demo Layer section
+- [x] `display-app/src/App.tsx` — added `showAmbientPreview` local state wired to `DebugPanel` and `PixiStage`
+
+### Test Results
+```
+✓ drinkCatalog.test.ts          7 tests
+✓ CalibrationMapper.test.ts     6 tests
+✓ TrackingEngine.test.ts        8 tests
+✓ AnimationDispatcher.test.ts  10 tests
+✓ useAppStore.test.ts          25 tests  (+2 new: triggerOrderBurst, clearOrderBurst)
+✓ UserNode.test.tsx            11 tests
+✓ SpriteRegistry.test.ts       29 tests
+✓ drinkMenuMedia.test.ts        1 test
+✓ GameOverlay.test.tsx          2 tests
+Total: 99/99
+```
+
+- [x] `npm run build` clean (`tsc -b && vite build`; pre-existing >500 kB chunk warning only)
+
+### Manual QA Checklist
+- Place apple-tart coaster near left/right/top edge → fall frames should face that edge (not always "falling down")
+- Order any drink from a user node panel → colored ring burst (~2s, 3 staggered rings) appears at node position in that user's color
+- Open debug panel → click "Ambient Preview (placeholder)" → particle-network animation fills canvas with "DESIGN PREVIEW" label; toggle off → disappears
+
+---
+
 ## Session: 2026-04-29
 
 ### Completed — MVP End-to-End Demo Flow

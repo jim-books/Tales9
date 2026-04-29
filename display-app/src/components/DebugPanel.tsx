@@ -21,6 +21,8 @@ export interface DebugPanelProps {
   onStartGame: (type: GameType) => void
   onEndGame: () => void
   onClose: () => void
+  showAmbientPreview: boolean
+  onToggleAmbientPreview: () => void
 }
 
 /**
@@ -44,6 +46,8 @@ export function DebugPanel({
   onStartGame,
   onEndGame,
   onClose,
+  showAmbientPreview,
+  onToggleAmbientPreview,
 }: DebugPanelProps): JSX.Element {
   const sessionActive = useAppStore((s) => s.sessionActive)
   const userNodes = useAppStore((s) => s.userNodes)
@@ -159,6 +163,14 @@ export function DebugPanel({
       {/* Demo Coasters */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ marginBottom: 6 }}>{'── Demo Layer (temporary) ──'}</div>
+        <div style={{ marginBottom: 8 }}>
+          <button
+            onClick={onToggleAmbientPreview}
+            style={buttonStyle(showAmbientPreview)}
+          >
+            {showAmbientPreview ? '◉' : '○'} Ambient Preview (placeholder)
+          </button>
+        </div>
         <div
           style={{
             marginBottom: 8,

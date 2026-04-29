@@ -663,7 +663,7 @@ For the MVP pilot, the bartender app handles:
 
 ---
 
-## Future Direction: Version 2
+<!-- ## Future Direction: Version 2
 
 ### Generative AI SDK for Venue Customization
 
@@ -676,7 +676,7 @@ For the MVP pilot, the bartender app handles:
 - **Content Management:** Venues manage their own drink menus, editorial content, and quiz questions
 - **Generative Visuals:** AI-driven animation generation based on venue identity, allowing unique experiences without custom development
 
-**Vision:** Version 2 enables platformization, allowing Tales9 to scale to multiple venues while preserving each venue's unique character and guest experience.
+**Vision:** Version 2 enables platformization, allowing Tales9 to scale to multiple venues while preserving each venue's unique character and guest experience. -->
 
 **Status:** Not part of MVP scope. Strategic direction only.
 

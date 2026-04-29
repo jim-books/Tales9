@@ -236,4 +236,15 @@ describe('useAppStore', () => {
     const order = useAppStore.getState().orders.find((o) => o.id === 'ord-f')
     expect(order?.status).toBe('pending')
   })
+
+  it('triggerOrderBurst sets orderBurst state', () => {
+    useAppStore.getState().triggerOrderBurst(500, 800, 0x4a9eff)
+    expect(useAppStore.getState().orderBurst).toEqual({ x: 500, y: 800, colorHex: 0x4a9eff })
+  })
+
+  it('clearOrderBurst resets orderBurst to null', () => {
+    useAppStore.getState().triggerOrderBurst(500, 800, 0x4a9eff)
+    useAppStore.getState().clearOrderBurst()
+    expect(useAppStore.getState().orderBurst).toBeNull()
+  })
 })

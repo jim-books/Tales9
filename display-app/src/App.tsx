@@ -33,6 +33,7 @@ function MainView(): JSX.Element {
   const arriveOrderByCoaster = useAppStore((s) => s.arriveOrderByCoaster)
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [showAmbientPreview, setShowAmbientPreview] = useState(false)
   const [demoDrinkOverrides, setDemoDrinkOverrides] = useState<{
     0: string
     1: string
@@ -288,7 +289,7 @@ function MainView(): JSX.Element {
       }}
     >
       {/* Layer 0: PixiJS canvas (standby ambient + coaster animations + game layer) */}
-      <PixiStage onTrackingSurfaceReady={setTrackingSurface} />
+      <PixiStage onTrackingSurfaceReady={setTrackingSurface} showAmbientPreview={showAmbientPreview} />
 
       {/* Layer 1: Game result overlay (shown after arrow/crown animation completes) */}
       <GameOverlay />
@@ -323,6 +324,8 @@ function MainView(): JSX.Element {
           onStartGame={(type: GameType) => startGame(type)}
           onEndGame={() => endGame()}
           onClose={() => setShowDebugPanel(false)}
+          showAmbientPreview={showAmbientPreview}
+          onToggleAmbientPreview={() => setShowAmbientPreview((v) => !v)}
         />
       ) : (
         <button

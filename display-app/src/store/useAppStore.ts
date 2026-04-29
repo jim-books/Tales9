@@ -48,6 +48,9 @@ interface AppState {
   // ─── Games ───────────────────────────────────────────────────────────────
   gameState: GameState | null
 
+  // ─── Visual effects ───────────────────────────────────────────────────────
+  orderBurst: { x: number; y: number; colorHex: number } | null
+
   // ─── Actions ─────────────────────────────────────────────────────────────
   startSession: (userCount: number) => void
   endSession: () => void
@@ -76,6 +79,9 @@ interface AppState {
   startGame: (type: GameType) => void
   advanceGame: (phase: number, chosenCoasterId: string | null, chosenUserId: string | null) => void
   endGame: () => void
+
+  triggerOrderBurst: (x: number, y: number, colorHex: number) => void
+  clearOrderBurst: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -85,6 +91,7 @@ export const useAppStore = create<AppState>((set) => ({
   coasters: [],
   orders: [],
   gameState: null,
+  orderBurst: null,
 
   startSession: (userCount) =>
     set({
@@ -224,4 +231,7 @@ export const useAppStore = create<AppState>((set) => ({
     ),
 
   endGame: () => set({ gameState: null }),
+
+  triggerOrderBurst: (x, y, colorHex) => set({ orderBurst: { x, y, colorHex } }),
+  clearOrderBurst: () => set({ orderBurst: null }),
 }))

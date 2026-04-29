@@ -7,42 +7,46 @@
 const { WebSocketServer } = require('ws');
 
 const PORT = 8080;
-let lastConfig = null; // { animationType, topBarName, color }
+let lastConfig = null;   // { animationType, topBarName, color }
+let lastSession = null;  // { type: 'SESSION_START', payload: { userCount } }
 
 const wss = new WebSocketServer({ port: PORT, host: '0.0.0.0' });
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
 
-  if (lastConfig) {
-    try {
-      ws.send(JSON.stringify({ type: 'CONFIG_UPDATE', payload: lastConfig }));
-    } catch (e) {
-      console.warn('Send initial config failed:', e.message);
-    }
+  // Replay cached state to new connections
+  try {
+    if (lastConfig) ws.send(JSON.stringify({ type: 'CONFIG_UPDATE', payload: lastConfig }));
+    if (lastSession) ws.send(JSON.stringify(lastSession));
+  } catch (e) {
+    console.warn('Send initial state failed:', e.message);
   }
 
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data.toString());
+
+      // Cache stateful messages for new-connection replay
       if (msg.type === 'CONFIG_UPDATE' && msg.payload) {
         lastConfig = {
           animationType: msg.payload.animationType ?? '',
           topBarName: msg.payload.topBarName ?? '',
           color: msg.payload.color ?? '#7D5FFF'
         };
-        const payload = JSON.stringify({ type: 'CONFIG_UPDATE', payload: lastConfig });
-        wss.clients.forEach((client) => {
-          if (client.readyState === 1) client.send(payload);
-        });
-        console.log('Broadcast CONFIG_UPDATE', lastConfig);
-      } else if (msg.type === 'SUBMIT_ORDER' && msg.payload) {
-        const payload = JSON.stringify(msg);
-        wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === 1) client.send(payload);
-        });
-        console.log('Broadcast SUBMIT_ORDER', msg.payload);
       }
+      if (msg.type === 'SESSION_START') lastSession = msg;
+      if (msg.type === 'SESSION_END')   lastSession = null;
+
+      // SUBMIT_ORDER excludes sender; all other types broadcast to everyone
+      const excludeSender = msg.type === 'SUBMIT_ORDER';
+      const out = JSON.stringify(msg);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1 && (!excludeSender || client !== ws)) {
+          client.send(out);
+        }
+      });
+      console.log('Broadcast', msg.type);
     } catch (e) {
       console.warn('Invalid message:', e.message);
     }

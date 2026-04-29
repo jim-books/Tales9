@@ -83,7 +83,7 @@ export class IngredientSprite {
     const def = spriteRegistry.get(character)
     if (def) {
       // Real frame-based animation
-      this.player = new FrameAnimPlayer(def, this.container)
+      this.player = new FrameAnimPlayer(def, this.container, this.edge)
     } else {
       // Procedural placeholder
       const hue = charToHue(character)

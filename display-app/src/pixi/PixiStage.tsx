@@ -9,11 +9,13 @@ import { CoasterAnimation } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
 import { GameLayer } from './GameLayer'
 import { ProximityBattle } from './ProximityBattle'
+import { AmbientPreviewLayer } from './AmbientPreviewLayer'
 
 const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
 
 interface PixiStageProps {
   onTrackingSurfaceReady?: (element: HTMLDivElement | null) => void
+  showAmbientPreview?: boolean
 }
 
 /**
@@ -23,7 +25,7 @@ interface PixiStageProps {
  * React StrictMode-safe via the `cancelled` flag pattern.
  * Wires Zustand coaster state to CoasterAnimation + IngredientSprite instances.
  */
-export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.Element {
+export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiStageProps = {}): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const appRef = useRef<Application | null>(null)
   const standbyRef = useRef<StandbyLayer | null>(null)
@@ -37,6 +39,14 @@ export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.
     x: number
     y: number
   }>())
+  const burstRef = useRef<{
+    graphics: Graphics
+    phase: number
+    x: number
+    y: number
+    colorHex: number
+  } | null>(null)
+  const ambientRef = useRef<AmbientPreviewLayer | null>(null)
 
   useEffect(() => {
     onTrackingSurfaceReady?.(containerRef.current)
@@ -105,6 +115,25 @@ export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.
             .circle(preview.x, preview.y, r * 0.6)
             .stroke({ color: 0x99e6ff, width: 1, alpha: alpha * 0.7 })
         })
+        // Order burst: 3 staggered expanding rings in user color
+        if (burstRef.current) {
+          const b = burstRef.current
+          b.phase += app.ticker.deltaTime
+          b.graphics.clear()
+          for (let i = 0; i < 3; i++) {
+            const t = (b.phase - i * 20) / 90
+            if (t <= 0 || t > 1) continue
+            b.graphics
+              .circle(b.x, b.y, 40 + t * 160)
+              .stroke({ color: b.colorHex, width: 3, alpha: (1 - t) * 0.75 })
+          }
+          if (b.phase > 130) {
+            if (b.graphics.parent) b.graphics.parent.removeChild(b.graphics)
+            b.graphics.destroy()
+            burstRef.current = null
+            useAppStore.getState().clearOrderBurst()
+          }
+        }
       })
     })
 
@@ -122,6 +151,12 @@ export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.
       battlesRef.current.clear()
       previewsRef.current.forEach((p) => p.graphics.destroy())
       previewsRef.current.clear()
+      if (burstRef.current) {
+        burstRef.current.graphics.destroy()
+        burstRef.current = null
+      }
+      ambientRef.current?.destroy()
+      ambientRef.current = null
       appRef.current?.destroy(true, { children: true })
       appRef.current = null
     }
@@ -292,6 +327,41 @@ export function PixiStage({ onTrackingSurfaceReady }: PixiStageProps = {}): JSX.
       }
     }
   }, [sessionActive, coasters])
+
+  // ─── Order burst animation ────────────────────────────────────────────────────
+  const orderBurst = useAppStore((s) => s.orderBurst)
+
+  useEffect(() => {
+    const app = appRef.current
+    if (!app || !orderBurst) return
+    if (burstRef.current) {
+      burstRef.current.graphics.parent?.removeChild(burstRef.current.graphics)
+      burstRef.current.graphics.destroy()
+      burstRef.current = null
+    }
+    const graphics = new Graphics()
+    app.stage.addChild(graphics)
+    burstRef.current = {
+      graphics,
+      phase: 0,
+      x: orderBurst.x,
+      y: orderBurst.y,
+      colorHex: orderBurst.colorHex,
+    }
+  }, [orderBurst])
+
+  // ─── Ambient preview layer ────────────────────────────────────────────────────
+  useEffect(() => {
+    const app = appRef.current
+    if (!app) return
+    if (showAmbientPreview && !ambientRef.current) {
+      ambientRef.current = new AmbientPreviewLayer(app)
+      ambientRef.current.mount()
+    } else if (!showAmbientPreview && ambientRef.current) {
+      ambientRef.current.destroy()
+      ambientRef.current = null
+    }
+  }, [showAmbientPreview])
 
   return (
     <div

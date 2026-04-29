@@ -16,6 +16,10 @@ interface UserNodeProps {
   orders: Order[]
 }
 
+const USER_COLOR_HEX: Record<string, number> = {
+  blue: 0x4a9eff, green: 0x4ade80, orange: 0xfb923c, purple: 0xc084fc,
+}
+
 const MIN_POS = 0.05
 const MAX_POS = 0.95
 const TAP_SLOP_PX = 16
@@ -187,6 +191,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     unlockUserNodeOrientation,
     addOrder,
     startGame,
+    triggerOrderBurst,
   } = useAppStore()
   const [screen, setScreen] = useState<PanelScreen>({ view: 'home' })
 
@@ -218,9 +223,14 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         status: 'pending',
         createdAt: Date.now(),
       })
+      triggerOrderBurst(
+        node.position.x * canvasSize,
+        node.position.y * canvasSize,
+        USER_COLOR_HEX[node.color] ?? 0xffffff,
+      )
       setScreen({ view: 'orders' })
     },
-    [addOrder, node.id],
+    [addOrder, triggerOrderBurst, node.id, node.position, node.color, canvasSize],
   )
 
   const handlePointerDown = useCallback(
