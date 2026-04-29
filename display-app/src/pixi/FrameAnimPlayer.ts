@@ -1,5 +1,5 @@
 import { AnimatedSprite, Assets, Container, Texture, type Ticker } from 'pixi.js'
-import type { SpriteAnimDef } from './SpriteAnimDef'
+import { getFallWaitClip, type SpriteAnimDef } from './SpriteAnimDef'
 
 export type WalkEdge = 'top' | 'right' | 'bottom' | 'left'
 
@@ -78,22 +78,30 @@ export function orientationForEdge(edge: WalkEdge): { scaleX: 1 | -1; rotation: 
 /**
  * FrameAnimPlayer
  *
- * Manages two AnimatedSprite instances (fall + walk) for one IngredientSprite.
- * Textures must already be in the Assets cache when this is constructed
- * (pre-loaded by PixiStage on startup).
+ * Manages AnimatedSprite clips for one IngredientSprite: fall, optional fall-wait
+ * (idle or wave), then walk. Textures must already be in the Assets cache when
+ * this is constructed (pre-loaded by PixiStage on startup).
  *
- * autoUpdate is set to false on both sprites — the caller must pass the Ticker
- * to tick() each frame so all animation is driven by the shared app ticker.
+ * autoUpdate is set to false on sprites — the caller must pass the Ticker to
+ * tick() each frame so all animation is driven by the shared app ticker.
  */
 export class FrameAnimPlayer {
   private readonly fallSprite: AnimatedSprite
   private readonly walkSprite: AnimatedSprite
+  private readonly fallWaitSprite: AnimatedSprite | null
   private readonly container: Container
   private readonly stateMachine = new AnimStateMachine()
   private walkingMounted = false
 
   constructor(def: SpriteAnimDef, container: Container) {
     this.container = container
+
+    const loopHandler = (): void => {
+      this.stateMachine.onLoop()
+      if (this.stateMachine.readyToWalk) {
+        this.switchToWalk()
+      }
+    }
 
     // Build textures from cache (Assets.load already called by PixiStage)
     const fallTextures = def.fall.frames.map((url) => {
@@ -107,18 +115,31 @@ export class FrameAnimPlayer {
       return tex
     })
 
+    const waitDef = getFallWaitClip(def)
+    if (waitDef) {
+      const waitTextures = waitDef.frames.map((url) => {
+        const tex = Assets.get<Texture>(url)
+        if (!tex) throw new Error(`FrameAnimPlayer: texture not cached for ${url}`)
+        return tex
+      })
+      this.fallWaitSprite = new AnimatedSprite(waitTextures)
+      this.fallWaitSprite.autoUpdate = false
+      this.fallWaitSprite.animationSpeed = waitDef.animationSpeed
+      this.fallWaitSprite.anchor.set(0.5, 1.0)
+      this.fallWaitSprite.scale.set(def.scale)
+      this.fallWaitSprite.loop = true
+      this.fallWaitSprite.onLoop = loopHandler
+    } else {
+      this.fallWaitSprite = null
+    }
+
     this.fallSprite = new AnimatedSprite(fallTextures)
     this.fallSprite.autoUpdate = false
     this.fallSprite.animationSpeed = def.fall.animationSpeed
     this.fallSprite.anchor.set(0.5, 1.0)
     this.fallSprite.scale.set(def.scale)
     this.fallSprite.loop = true  // onLoop fires each cycle; we stop externally
-    this.fallSprite.onLoop = () => {
-      this.stateMachine.onLoop()
-      if (this.stateMachine.readyToWalk) {
-        this.switchToWalk()
-      }
-    }
+    this.fallSprite.onLoop = loopHandler
     this.fallSprite.play()
     container.addChild(this.fallSprite)
 
@@ -135,6 +156,17 @@ export class FrameAnimPlayer {
   /** Called by IngredientSprite when its drop physics reaches the landing position. */
   notifyPhysicsLanded(): void {
     this.stateMachine.onPhysicsLanded()
+    if (
+      this.fallWaitSprite &&
+      this.stateMachine.phase === 'FALL_WAIT'
+    ) {
+      this.fallSprite.stop()
+      if (this.fallSprite.parent) {
+        this.container.removeChild(this.fallSprite)
+      }
+      this.container.addChild(this.fallWaitSprite)
+      this.fallWaitSprite.play()
+    }
     if (this.stateMachine.readyToWalk) {
       this.switchToWalk()
     }
@@ -155,6 +187,11 @@ export class FrameAnimPlayer {
   tick(ticker: Ticker): void {
     if (this.isWalking) {
       this.walkSprite.update(ticker)
+    } else if (
+      this.stateMachine.phase === 'FALL_WAIT' &&
+      this.fallWaitSprite?.parent
+    ) {
+      this.fallWaitSprite.update(ticker)
     } else {
       this.fallSprite.update(ticker)
     }
@@ -165,18 +202,23 @@ export class FrameAnimPlayer {
     return this.stateMachine.readyToWalk
   }
 
-  /** Destroys both AnimatedSprite instances. Does NOT destroy textures (cache owns them). */
+  /** Destroys AnimatedSprite instances. Does NOT destroy textures (cache owns them). */
   destroy(): void {
     this.fallSprite.destroy({ texture: false, textureSource: false })
     this.walkSprite.destroy({ texture: false, textureSource: false })
+    this.fallWaitSprite?.destroy({ texture: false, textureSource: false })
   }
 
   private switchToWalk(): void {
     if (this.walkingMounted) return
     this.walkingMounted = true
     this.fallSprite.stop()
+    this.fallWaitSprite?.stop()
     if (this.fallSprite.parent) {
       this.container.removeChild(this.fallSprite)
+    }
+    if (this.fallWaitSprite?.parent) {
+      this.container.removeChild(this.fallWaitSprite)
     }
     this.container.addChild(this.walkSprite)
   }

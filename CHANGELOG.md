@@ -327,6 +327,16 @@ Total: 66/66
 - [x] `SmartTableAI (Bartender)/SmartTableAI/DemoSyncClient.swift` — `@MainActor` isolation; `ordersListener` stored as `nonisolated(unsafe)` so `deinit` can remove the Firestore listener off the main actor
 - [x] `SmartTableAI (Bartender)/SmartTableAI/ContentView.swift` — removed duplicate `discoverTables()` from root `onAppear`; VoiceOver labels for icon-only refresh and destructive trash actions; dashboard telemetry `LazyVGrid` for Dynamic Type; preview simulation table `contentShape`, `accessibilityAction` for center placement, `addSimulatedCoaster`; `DrinkEditor` default drink + Basics field for `catalogId` (display-app slug)
 
+### Completed — Sprite registry (mangosticky-rice, sb-cc, apple wave)
+
+- [x] `display-app/src/pixi/SpriteAnimDef.ts` — registered `mangosticky_rice` + `sb_cc` defs; added optional `idle` / `wave` on `SpriteAnimDef` and `getFallWaitClip()` helper; apple-tart includes `wave/` frames for FALL_WAIT; `getAllSpriteUrls()` preloads fall + walk + fall-wait frames (69 URLs)
+- [x] `display-app/src/pixi/FrameAnimPlayer.ts` — plays idle or wave clip during `FALL_WAIT` when defined; third `AnimatedSprite` for fall-wait textures
+- [x] `display-app/src/data/drinkCatalog.ts` — new drinks `mango-sticky-rice` (`mangosticky_rice`) and `salted-cc` (`sb_cc`)
+- [x] `display-app/src/data/drinkMenuMedia.ts` — `MangoStickyRice.mp4`; `salted-cc` → `StrawberryCheesecake.mp4` placeholder until a dedicated clip ships
+- [x] `display-app/src/__tests__/SpriteRegistry.test.ts` — expanded coverage for multi-character registry and preload URL count
+- [x] `SmartTableAI (Bartender)/SmartTableAI/MockAuraService.swift` — added two `Drink` rows with matching `catalogId` slugs for iOS demo parity
+- [x] Assets (already on disk): `public/sprites/mangosticky-rice/{fall,idle,walk}/`, `public/sprites/sb-cc/{fall,idle,walk}/`, `public/sprites/apple-tart/wave/`
+
 ### Test Results
 ```
 ✓ drinkCatalog.test.ts          7 tests
@@ -335,10 +345,10 @@ Total: 66/66
 ✓ AnimationDispatcher.test.ts  10 tests
 ✓ useAppStore.test.ts          23 tests  (+6 new)
 ✓ UserNode.test.tsx            11 tests
-✓ SpriteRegistry.test.ts       25 tests
+✓ SpriteRegistry.test.ts       29 tests  (+4 character / preload cases)
 ✓ drinkMenuMedia.test.ts        1 test
 ✓ GameOverlay.test.tsx          2 tests
-Total: 93/93
+Total: 97/97
 ```
 
 - [x] `npm run build` clean (`tsc -b && vite build`; pre-existing >500 kB chunk warning only)

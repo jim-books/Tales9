@@ -75,6 +75,16 @@ final class MockAuraService: AuraService {
                   iconName: "leaf.fill", useBrandColors: false,
                   colors: BrandColors(primary: "#8DB48E", secondary: "#C8E6C9", accent: "#FFF9C4", background: base.background),
                   animation: templateCatalog[3], showNameOnPlacement: true, displayDuration: 4, intensity: 0.6, speed: 0.5),
+            Drink(id: UUID(), catalogId: "mango-sticky-rice", name: "Mango Sticky Rice",
+                  description: "Tropical dessert cocktail with mango and rice-cream notes", category: "Signature",
+                  iconName: "leaf.circle.fill", useBrandColors: false,
+                  colors: BrandColors(primary: "#FFB347", secondary: "#FFD700", accent: "#FFF8E7", background: base.background),
+                  animation: templateCatalog[4], showNameOnPlacement: true, displayDuration: 4, intensity: 0.75, speed: 0.55),
+            Drink(id: UUID(), catalogId: "salted-cc", name: "Salted CC",
+                  description: "Salted caramel and cream — bold dessert-bar profile", category: "Signature",
+                  iconName: "drop.fill", useBrandColors: false,
+                  colors: BrandColors(primary: "#5C4033", secondary: "#D4A574", accent: "#F5E6D3", background: base.background),
+                  animation: templateCatalog[0], showNameOnPlacement: true, displayDuration: 4, intensity: 0.8, speed: 0.5),
         ]
     }
 

@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { spriteRegistry, getAllSpriteUrls } from '../pixi/SpriteAnimDef'
+import { spriteRegistry, getAllSpriteUrls, getFallWaitClip } from '../pixi/SpriteAnimDef'
 import { AnimStateMachine, orientationForEdge } from '../pixi/FrameAnimPlayer'
 
 describe('spriteRegistry', () => {
-  it('has an entry for apple character', () => {
+  it('has registered sprite characters with full clip sets', () => {
     expect(spriteRegistry.get('apple')).toBeDefined()
+    expect(spriteRegistry.get('mangosticky_rice')).toBeDefined()
+    expect(spriteRegistry.get('sb_cc')).toBeDefined()
   })
 
   it('returns undefined for unregistered characters', () => {
@@ -21,6 +23,11 @@ describe('spriteRegistry', () => {
   it('apple walk frameset has 5 frames', () => {
     const def = spriteRegistry.get('apple')!
     expect(def.walk.frames).toHaveLength(5)
+  })
+
+  it('apple wave frameset has 9 frames (FALL_WAIT clip)', () => {
+    const def = spriteRegistry.get('apple')!
+    expect(getFallWaitClip(def)?.frames).toHaveLength(9)
   })
 
   it('apple fall frames follow the /sprites/ path convention', () => {
@@ -51,11 +58,29 @@ describe('spriteRegistry', () => {
     const def = spriteRegistry.get('apple')!
     expect(def.scale).toBeGreaterThan(0)
   })
+
+  it('mangosticky_rice fall/walk/idle frame counts match shipped assets', () => {
+    const def = spriteRegistry.get('mangosticky_rice')!
+    expect(def.fall.frames).toHaveLength(9)
+    expect(def.walk.frames).toHaveLength(4)
+    expect(getFallWaitClip(def)?.frames).toHaveLength(8)
+  })
+
+  it('sb_cc fall/walk/idle frame counts match shipped assets', () => {
+    const def = spriteRegistry.get('sb_cc')!
+    expect(def.fall.frames).toHaveLength(8)
+    expect(def.walk.frames).toHaveLength(8)
+    expect(getFallWaitClip(def)?.frames).toHaveLength(8)
+  })
 })
 
 describe('getAllSpriteUrls', () => {
-  it('returns 15 URLs (10 fall + 5 walk) for the current registry', () => {
-    expect(getAllSpriteUrls()).toHaveLength(15)
+  /** apple 10+5+9 + mangosticky 9+4+8 + sb_cc 8+8+8 */
+  const EXPECTED_TOTAL_SPRITE_URLS =
+    (10 + 5 + 9) + (9 + 4 + 8) + (8 + 8 + 8)
+
+  it('returns all preload URLs for fall + walk + fall-wait clips', () => {
+    expect(getAllSpriteUrls()).toHaveLength(EXPECTED_TOTAL_SPRITE_URLS)
   })
 
   it('returns unique URLs', () => {
@@ -69,14 +94,21 @@ describe('getAllSpriteUrls', () => {
     }
   })
 
-  it('includes all 10 fall frame paths', () => {
+  it('includes apple-tart wave paths for preload', () => {
+    const urls = getAllSpriteUrls()
+    for (let i = 1; i <= 9; i++) {
+      expect(urls).toContain(`/sprites/apple-tart/wave/Apple8bitWave${i}.png`)
+    }
+  })
+
+  it('includes all 10 apple fall frame paths', () => {
     const urls = getAllSpriteUrls()
     for (let i = 1; i <= 10; i++) {
       expect(urls).toContain(`/sprites/apple-tart/fall/Apple8bitFallSep${i}.png`)
     }
   })
 
-  it('includes all 5 walk frame paths', () => {
+  it('includes all 5 apple walk frame paths', () => {
     const urls = getAllSpriteUrls()
     for (let i = 1; i <= 5; i++) {
       expect(urls).toContain(`/sprites/apple-tart/walk/Apple8bitWalkSep${i}.png`)

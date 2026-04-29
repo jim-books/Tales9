@@ -4,6 +4,9 @@ const DRINK_MENU_MEDIA: Record<string, string> = {
   'momo-sour': new URL('../../../Cocktail Menu Animation/MomoSour.mp4', import.meta.url).href,
   // Asset filename uses legacy "Piso" spelling; keep explicit mapping to avoid silent mismatch.
   'pisco-colada': new URL('../../../Cocktail Menu Animation/PisoColada.mp4', import.meta.url).href,
+  'mango-sticky-rice': new URL('../../../Cocktail Menu Animation/MangoStickyRice.mp4', import.meta.url).href,
+  // Placeholder reel until a dedicated menu clip exists; swap path when asset lands.
+  'salted-cc': new URL('../../../Cocktail Menu Animation/StrawberryCheesecake.mp4', import.meta.url).href,
 }
 
 export function getDrinkMenuMedia(drinkId: string): string | null {

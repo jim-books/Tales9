@@ -50,6 +50,30 @@ export const drinkCatalog: DrinkProfile[] = [
     spriteCharacter: 'apple',
     description: 'Inspired by the classic French tarte tatin — warm apple brandy with cinnamon and a hint of cream.',
   },
+  {
+    id: 'mango-sticky-rice',
+    name: 'MANGO STICKY RICE',
+    category: 'DESSERT_INSPIRED',
+    price: 118,
+    flavorProfile: 'Creamy/Tropical',
+    ingredients: ['Rum', 'Mango', 'Coconut Cream', 'Sticky Rice Syrup', 'Lime'],
+    animationFamily: 'tropical',
+    colorPalette: ['#FFB347', '#FFD700', '#FFF8E7'],
+    spriteCharacter: 'mangosticky_rice',
+    description: 'Dessert-forward tropical serve with mango richness and a rice-cream finish.',
+  },
+  {
+    id: 'salted-cc',
+    name: 'SALTED CC',
+    category: 'DESSERT_INSPIRED',
+    price: 128,
+    flavorProfile: 'Rich/Sweet-Salty',
+    ingredients: ['Whisky', 'Salted Caramel', 'Cream', 'Vanilla', 'Cocoa Bitters'],
+    animationFamily: 'bold',
+    colorPalette: ['#5C4033', '#D4A574', '#F5E6D3'],
+    spriteCharacter: 'sb_cc',
+    description: 'Decadent salted caramel and cream — bold, dessert-bar energy in a glass.',
+  },
 ]
 
 export const getDrinkById = (id: string): DrinkProfile | undefined =>
