@@ -106,26 +106,16 @@ describe('UserNode orientation resolver', () => {
     expect(rotationForEdge('left')).toBe(90)
   })
 
-  it('anchors top/bottom panels beside the node using left/right-side logic', () => {
-    expect(panelAnchorStyleForEdge('bottom', 0.25)).toMatchObject({
-      left: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
+  it('anchors top/bottom panels above and below the node center', () => {
+    expect(panelAnchorStyleForEdge('bottom')).toMatchObject({
+      bottom: 'calc(100% + 12px)',
+      left: '50%',
+      transform: 'translateX(-50%)',
     })
-    expect(panelAnchorStyleForEdge('top', 0.25)).toMatchObject({
-      left: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('bottom', 0.75)).toMatchObject({
-      right: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
-    })
-    expect(panelAnchorStyleForEdge('top', 0.75)).toMatchObject({
-      right: 'calc(100% + 12px)',
-      top: '50%',
-      transform: 'translateY(-50%)',
+    expect(panelAnchorStyleForEdge('top')).toMatchObject({
+      top: 'calc(100% + 12px)',
+      left: '50%',
+      transform: 'translateX(-50%)',
     })
     expect(panelAnchorStyleForEdge('left')).toMatchObject({
       left: 'calc(100% + 12px)',

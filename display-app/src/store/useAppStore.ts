@@ -197,6 +197,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   linkOrderToCoaster: (drinkId, coasterId) =>
     set((s) => {
+      // Idempotent guard: WS + Firestore may emit the same assignment.
+      if (s.orders.some((o) => o.coasterId === coasterId)) return s
       let linked = false
       return {
         orders: s.orders.map((o) => {

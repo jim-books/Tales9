@@ -121,7 +121,7 @@ export function GameOverlay(): JSX.Element | null {
       {userNodes.map((node) => {
         const isChosen = node.id === chosenNode.id
         const displayEdge = node.lockedEdge ?? node.viewEdge ?? node.ownerEdge
-        const anchorStyle = panelAnchorStyleForEdge(displayEdge, node.position.x)
+        const anchorStyle = panelAnchorStyleForEdge(displayEdge)
         const transform = panelTransformForEdge(displayEdge)
         const transformOrigin = popupTransformOriginForNode(node.position.x, displayEdge)
         const wrapperSize = popupWrapperSizeForEdge(displayEdge)

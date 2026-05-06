@@ -27,7 +27,7 @@ const EDGE_TIE_THRESHOLD = 0.03
 const APPROACH_INTENT_MIN_PX = 6
 const PANEL_WIDTH = 360
 const PANEL_HEIGHT = 480
-const PANEL_SCALE = 0.75
+const PANEL_SCALE = 1.05
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -98,32 +98,20 @@ export function resolveViewEdge(
   return ownerEdge
 }
 
-export function panelAnchorStyleForEdge(edge: UserEdge, positionX = 0.5): React.CSSProperties {
+export function panelAnchorStyleForEdge(edge: UserEdge): React.CSSProperties {
   switch (edge) {
     case 'bottom':
-      return positionX <= 0.5
-        ? {
-            left: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-        : {
-            right: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
+      return {
+        bottom: 'calc(100% + 12px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+      }
     case 'top':
-      return positionX <= 0.5
-        ? {
-            left: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
-        : {
-            right: 'calc(100% + 12px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-          }
+      return {
+        top: 'calc(100% + 12px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+      }
     case 'left':
       return {
         left: 'calc(100% + 12px)',
@@ -141,13 +129,12 @@ export function panelAnchorStyleForEdge(edge: UserEdge, positionX = 0.5): React.
 
 function panelTransformOriginForEdge(
   edge: UserEdge,
-  positionX = 0.5,
 ): React.CSSProperties['transformOrigin'] {
   switch (edge) {
     case 'bottom':
-      return positionX <= 0.5 ? 'left center' : 'right center'
+      return 'center bottom'
     case 'top':
-      return positionX <= 0.5 ? 'left center' : 'right center'
+      return 'center top'
     case 'left':
       return 'left center'
     case 'right':
@@ -203,8 +190,8 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
 
   const displayEdge = node.lockedEdge ?? node.viewEdge ?? node.ownerEdge
   const rotation = rotationForEdge(displayEdge)
-  const panelAnchorStyle = panelAnchorStyleForEdge(displayEdge, node.position.x)
-  const panelTransformOrigin = panelTransformOriginForEdge(displayEdge, node.position.x)
+  const panelAnchorStyle = panelAnchorStyleForEdge(displayEdge)
+  const panelTransformOrigin = panelTransformOriginForEdge(displayEdge)
   const panelTransform = panelTransformForEdge(displayEdge)
   const panelWrapperSize = panelWrapperSizeForEdge(displayEdge)
 
@@ -523,6 +510,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
               border: '1px solid var(--color-border)',
               borderRadius: 16,
               overflow: 'hidden',
+              touchAction: 'pan-y',
               display: 'flex',
               flexDirection: 'column',
               transform: `${panelTransform} scale(${PANEL_SCALE})`,

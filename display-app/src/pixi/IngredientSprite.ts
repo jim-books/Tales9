@@ -155,33 +155,33 @@ export class IngredientSprite {
       case 'bottom':
         this.x += WALK_SPEED * this.walkDir
         if (this.x >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
-          this.x = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'right'; this.y = CANVAS_SIZE - EDGE_MARGIN
+          this.x = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'right'; this.y = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         } else if (this.x <= EDGE_MARGIN + CORNER_TOL) {
-          this.x = EDGE_MARGIN; this.edge = 'left'; this.y = CANVAS_SIZE - EDGE_MARGIN
+          this.x = EDGE_MARGIN; this.edge = 'left'; this.y = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         }
         break
       case 'right':
         this.y -= WALK_SPEED * this.walkDir
         if (this.y <= EDGE_MARGIN + CORNER_TOL) {
-          this.y = EDGE_MARGIN; this.edge = 'top'; this.x = CANVAS_SIZE - EDGE_MARGIN
+          this.y = EDGE_MARGIN; this.edge = 'top'; this.x = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         } else if (this.y >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
-          this.y = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'bottom'; this.x = CANVAS_SIZE - EDGE_MARGIN
+          this.y = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'bottom'; this.x = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         }
         break
       case 'top':
         this.x -= WALK_SPEED * this.walkDir
         if (this.x <= EDGE_MARGIN + CORNER_TOL) {
-          this.x = EDGE_MARGIN; this.edge = 'left'; this.y = EDGE_MARGIN
+          this.x = EDGE_MARGIN; this.edge = 'left'; this.y = EDGE_MARGIN + CORNER_TOL + 1
         } else if (this.x >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
-          this.x = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'right'; this.y = EDGE_MARGIN
+          this.x = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'right'; this.y = EDGE_MARGIN + CORNER_TOL + 1
         }
         break
       case 'left':
         this.y += WALK_SPEED * this.walkDir
         if (this.y >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
-          this.y = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'bottom'; this.x = EDGE_MARGIN
+          this.y = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'bottom'; this.x = EDGE_MARGIN + CORNER_TOL + 1
         } else if (this.y <= EDGE_MARGIN + CORNER_TOL) {
-          this.y = EDGE_MARGIN; this.edge = 'top'; this.x = EDGE_MARGIN
+          this.y = EDGE_MARGIN; this.edge = 'top'; this.x = EDGE_MARGIN + CORNER_TOL + 1
         }
         break
     }
@@ -190,11 +190,11 @@ export class IngredientSprite {
   private drawBody(color: number): void {
     if (!this.body) return
     // Body circle
-    this.body.circle(0, 0, 14).fill({ color, alpha: 0.9 })
+    this.body.circle(0, 0, 28).fill({ color, alpha: 0.9 })
     // Eyes
-    this.body.circle(-5, -4, 3).fill({ color: 0xffffff, alpha: 1 })
-    this.body.circle(5, -4, 3).fill({ color: 0xffffff, alpha: 1 })
-    this.body.circle(-5, -4, 1.5).fill({ color: 0x000000, alpha: 1 })
-    this.body.circle(5, -4, 1.5).fill({ color: 0x000000, alpha: 1 })
+    this.body.circle(-10, -8, 6).fill({ color: 0xffffff, alpha: 1 })
+    this.body.circle(10, -8, 6).fill({ color: 0xffffff, alpha: 1 })
+    this.body.circle(-10, -8, 3).fill({ color: 0x000000, alpha: 1 })
+    this.body.circle(10, -8, 3).fill({ color: 0x000000, alpha: 1 })
   }
 }

@@ -202,6 +202,23 @@ describe('useAppStore', () => {
     expect(orders.find((o) => o.id === 'ord-c2')?.coasterId).toBeNull()
   })
 
+  it('linkOrderToCoaster is idempotent for duplicate coaster assignments', () => {
+    useAppStore.getState().startSession(1)
+    useAppStore.getState().addOrder({
+      id: 'ord-i1', userId: 'user-0', drinkId: 'espresso-martini',
+      status: 'pending', coasterId: null, createdAt: 0,
+    })
+    useAppStore.getState().addOrder({
+      id: 'ord-i2', userId: 'user-0', drinkId: 'espresso-martini',
+      status: 'pending', coasterId: null, createdAt: 1,
+    })
+    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-1')
+    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-1')
+    const orders = useAppStore.getState().orders
+    expect(orders.find((o) => o.id === 'ord-i1')?.coasterId).toBe('coaster-1')
+    expect(orders.find((o) => o.id === 'ord-i2')?.coasterId).toBeNull()
+  })
+
   // ── arriveOrderByCoaster ──────────────────────────────────────────────────
 
   it('arriveOrderByCoaster sets status to arrived for the linked order', () => {

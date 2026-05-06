@@ -1,21 +1,75 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Application, Assets, Graphics } from 'pixi.js'
+import { Application, Assets, Graphics, Text, TextStyle } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
-import { getDrinkById } from '../data/drinkCatalog'
+import { drinkCatalog, getDrinkById } from '../data/drinkCatalog'
 import { StandbyLayer } from './StandbyLayer'
 import { CoasterAnimation } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
 import { GameLayer } from './GameLayer'
 import { ProximityBattle } from './ProximityBattle'
 import { AmbientPreviewLayer } from './AmbientPreviewLayer'
+import type { AnimationFamily } from '../types'
 
 const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
 
 interface PixiStageProps {
   onTrackingSurfaceReady?: (element: HTMLDivElement | null) => void
   showAmbientPreview?: boolean
+}
+
+function parseHexColor(hex: string, fallback = 0x66ccff): number {
+  const normalized = hex.trim().replace('#', '')
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return fallback
+  return Number.parseInt(normalized, 16)
+}
+
+function coasterLabelFromId(id: string): string {
+  const match = id.match(/(\d+)/)
+  return match ? `Coaster ${match[1]}` : id.toUpperCase()
+}
+
+function drawPreviewVibe(
+  graphics: Graphics,
+  family: AnimationFamily,
+  x: number,
+  y: number,
+  phase: number,
+  color: number,
+): void {
+  switch (family) {
+    case 'energetic': {
+      for (let i = 0; i < 3; i++) {
+        const angle = phase * 2.8 + (Math.PI * 2 * i) / 3
+        const ox = Math.cos(angle) * 16
+        const oy = Math.sin(angle) * 16
+        graphics.circle(x + ox, y + oy, 4).fill({ color, alpha: 0.68 })
+      }
+      break
+    }
+    case 'elegant': {
+      const ring = 10 + ((Math.sin(phase * 0.8) + 1) * 0.5) * 16
+      graphics.circle(x, y, ring).stroke({ color, width: 1.5, alpha: 0.56 })
+      break
+    }
+    case 'tropical': {
+      const p = (Math.sin(phase) + 1) * 0.5
+      graphics.circle(x, y, 12 + p * 8).stroke({ color, width: 2, alpha: 0.48 })
+      graphics.circle(x, y, 22 + (1 - p) * 8).stroke({ color, width: 1.5, alpha: 0.38 })
+      break
+    }
+    case 'bold': {
+      const pulse = 10 + ((Math.sin(phase * 1.4) + 1) * 0.5) * 10
+      for (let i = 0; i < 4; i++) {
+        const angle = (Math.PI * i) / 2
+        const x2 = x + Math.cos(angle) * pulse
+        const y2 = y + Math.sin(angle) * pulse
+        graphics.moveTo(x, y).lineTo(x2, y2).stroke({ color, width: 2, alpha: 0.62 })
+      }
+      break
+    }
+  }
 }
 
 /**
@@ -34,10 +88,15 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
   const gameLayerRef = useRef<GameLayer | null>(null)
   const battlesRef = useRef(new Map<string, ProximityBattle>())
   const previewsRef = useRef(new Map<string, {
-    graphics: Graphics
+    ring: Graphics
+    vibe: Graphics
+    label: Text
     phase: number
     x: number
     y: number
+    color: number
+    family: AnimationFamily
+    title: string
   }>())
   const burstRef = useRef<{
     graphics: Graphics
@@ -107,13 +166,26 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
           preview.phase += app.ticker.deltaTime * 0.06
           const r = 38 + 8 * Math.sin(preview.phase)
           const alpha = 0.28 + 0.14 * (1 + Math.sin(preview.phase * 1.4)) * 0.5
-          preview.graphics.clear()
-          preview.graphics
+          preview.ring.clear()
+          preview.ring
             .circle(preview.x, preview.y, r)
-            .stroke({ color: 0x66ccff, width: 2, alpha })
-          preview.graphics
+            .stroke({ color: preview.color, width: 2, alpha })
+          preview.ring
             .circle(preview.x, preview.y, r * 0.6)
-            .stroke({ color: 0x99e6ff, width: 1, alpha: alpha * 0.7 })
+            .stroke({ color: preview.color, width: 1, alpha: alpha * 0.7 })
+          preview.vibe.clear()
+          drawPreviewVibe(
+            preview.vibe,
+            preview.family,
+            preview.x,
+            preview.y,
+            preview.phase,
+            preview.color,
+          )
+          preview.label.text = preview.title
+          preview.label.alpha = 0.85
+          preview.label.x = preview.x
+          preview.label.y = preview.y - 56
         })
         // Order burst: 3 staggered expanding rings in user color
         if (burstRef.current) {
@@ -149,7 +221,11 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
       spritesRef.current.clear()
       battlesRef.current.forEach((b) => b.destroy())
       battlesRef.current.clear()
-      previewsRef.current.forEach((p) => p.graphics.destroy())
+      previewsRef.current.forEach((p) => {
+        p.ring.destroy()
+        p.vibe.destroy()
+        p.label.destroy()
+      })
       previewsRef.current.clear()
       if (burstRef.current) {
         burstRef.current.graphics.destroy()
@@ -234,8 +310,12 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
       battlesRef.current.forEach((b) => { b.unmount(); b.destroy() })
       battlesRef.current.clear()
       previewsRef.current.forEach((p) => {
-        if (p.graphics.parent) p.graphics.parent.removeChild(p.graphics)
-        p.graphics.destroy()
+        if (p.ring.parent) p.ring.parent.removeChild(p.ring)
+        if (p.vibe.parent) p.vibe.parent.removeChild(p.vibe)
+        if (p.label.parent) p.label.parent.removeChild(p.label)
+        p.ring.destroy()
+        p.vibe.destroy()
+        p.label.destroy()
       })
       previewsRef.current.clear()
       return
@@ -246,26 +326,75 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
     const clearPreview = (id: string): void => {
       const preview = previewsRef.current.get(id)
       if (!preview) return
-      if (preview.graphics.parent) preview.graphics.parent.removeChild(preview.graphics)
-      preview.graphics.destroy()
+      if (preview.ring.parent) preview.ring.parent.removeChild(preview.ring)
+      if (preview.vibe.parent) preview.vibe.parent.removeChild(preview.vibe)
+      if (preview.label.parent) preview.label.parent.removeChild(preview.label)
+      preview.ring.destroy()
+      preview.vibe.destroy()
+      preview.label.destroy()
       previewsRef.current.delete(id)
     }
 
-    const upsertPreview = (id: string, x: number, y: number): void => {
+    const upsertPreview = (
+      id: string,
+      x: number,
+      y: number,
+      color: number,
+      family: AnimationFamily,
+      title: string,
+    ): void => {
       const preview = previewsRef.current.get(id)
       if (preview) {
         preview.x = x
         preview.y = y
+        preview.color = color
+        preview.family = family
+        preview.title = title
+        preview.label.style = new TextStyle({
+          fontSize: 13,
+          fontWeight: '700',
+          fill: color,
+          align: 'center',
+          letterSpacing: 0.5,
+        })
         return
       }
-      const graphics = new Graphics()
-      app.stage.addChild(graphics)
-      previewsRef.current.set(id, { graphics, phase: 0, x, y })
+      const ring = new Graphics()
+      const vibe = new Graphics()
+      const label = new Text({
+        text: title,
+        style: new TextStyle({
+          fontSize: 13,
+          fontWeight: '700',
+          fill: color,
+          align: 'center',
+          letterSpacing: 0.5,
+        }),
+      })
+      label.anchor.set(0.5, 1)
+      label.alpha = 0.85
+      app.stage.addChild(ring)
+      app.stage.addChild(vibe)
+      app.stage.addChild(label)
+      previewsRef.current.set(id, { ring, vibe, label, phase: 0, x, y, color, family, title })
     }
 
     for (const c of coasters) {
       if (c.detectionState === 'preview') {
-        upsertPreview(c.id, c.centroid.x, c.centroid.y)
+        const previewProfile = c.drinkId
+          ? drinkCatalog.find((drink) => drink.id === c.drinkId)
+          : undefined
+        const previewColor = parseHexColor(previewProfile?.colorPalette[0] ?? '#66ccff')
+        const previewFamily: AnimationFamily = previewProfile?.animationFamily ?? 'elegant'
+        const previewName = previewProfile?.name ?? 'UNASSIGNED'
+        upsertPreview(
+          c.id,
+          c.centroid.x,
+          c.centroid.y,
+          previewColor,
+          previewFamily,
+          `${coasterLabelFromId(c.id)}: ${previewName}`,
+        )
         const anim = animsRef.current.get(c.id)
         if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
         const sprite = spritesRef.current.get(c.id)
