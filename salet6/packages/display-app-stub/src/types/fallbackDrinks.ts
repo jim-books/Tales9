@@ -1,0 +1,40 @@
+import type { DrinkProfile } from '@salet/shared';
+
+export const fallbackDrinks: DrinkProfile[] = [
+  {
+    id: 'stub-citrus-bloom',
+    name: 'CITRUS BLOOM',
+    category: 'CLASSICS',
+    price: 108,
+    flavorProfile: 'Citrus/Fresh',
+    ingredients: ['Gin', 'Yuzu', 'Lime', 'Tonic'],
+    animationFamily: 'energetic',
+    colorPalette: ['#ffc857', '#ff5d8f', '#74c0fc'],
+    spriteCharacter: 'yuzu',
+    description: 'Bright citrus profile for quick visual testing.',
+  },
+  {
+    id: 'stub-cocoa-mist',
+    name: 'COCOA MIST',
+    category: 'COFFEE_BASED',
+    price: 118,
+    flavorProfile: 'Roasted/Silky',
+    ingredients: ['Vodka', 'Cocoa', 'Espresso'],
+    animationFamily: 'bold',
+    colorPalette: ['#4b2e1f', '#c68642', '#f5deb3'],
+    spriteCharacter: 'cocoa',
+    description: 'Dark roast and cocoa tones for bold animation presets.',
+  },
+  {
+    id: 'stub-lotus-cloud',
+    name: 'LOTUS CLOUD',
+    category: 'DESSERT_INSPIRED',
+    price: 122,
+    flavorProfile: 'Creamy/Floral',
+    ingredients: ['Rum', 'Lotus', 'Cream'],
+    animationFamily: 'elegant',
+    colorPalette: ['#d5b8ff', '#f7d6e0', '#c3f0ca'],
+    spriteCharacter: 'lotus',
+    description: 'Soft floral dessert profile for elegant coaster motion.',
+  },
+];
