@@ -29,7 +29,7 @@ export class AnimationDispatcher {
     }
   }
 
-  /** Called by the bartender app (via WebSocket) when a coaster is assigned a drink */
+  /** Called when a coaster is assigned a drink (e.g. via Firebase/iOS tooling). */
   assignDrink(coasterId: string, drinkId: string): void {
     this.assignments.set(coasterId, drinkId)
   }

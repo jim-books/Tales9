@@ -36,17 +36,21 @@ npm run build    # Production build
 
 ---
 
-### 2. WebSocket Demo Server
+### 2. Archived: WebSocket Demo Server
 
-Local Node.js bridge relaying real-time events between iOS and web.
+The local Node.js bridge for iOS ↔ web relay has been archived to:
+
+`archive/Websocket Demo/`
+
+If needed for legacy testing:
 
 ```bash
-cd "Websocket Demo"
+cd "archive/Websocket Demo"
 npm install
 node demo-ws-server.js   # Starts on port 8080
 ```
 
-Emits `SESSION_START`, `COASTER_ASSIGN`, `ORDER_UPDATE` events for local testing.
+It emits `SESSION_START`, `COASTER_ASSIGN`, and `ORDER_UPDATE` events for local testing.
 
 ---
 

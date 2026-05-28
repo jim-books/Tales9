@@ -401,7 +401,7 @@ Total: 97/97
 - `venues/demo/orders/{orderId}` — `{ drinkId, drinkName, userId, status, timestamp }` written by display app, listened by existing iOS `DemoSyncClient`
 
 ### Demo Rehearsal Checklist
-1. Start WS server: `cd "Websocket Demo" && node demo-ws-server.js`
+1. Start archived WS server (legacy): `cd "archive/Websocket Demo" && node demo-ws-server.js`
 2. Start display app: `cd display-app && npm run dev`
 3. iOS: Demo Sync tab → set user count → Start Session → User Nodes appear on display
 4. Display: open a User Node panel → Menu → ORDER a drink → order appears in iOS orders list

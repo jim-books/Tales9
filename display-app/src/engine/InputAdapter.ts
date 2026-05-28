@@ -7,10 +7,9 @@ import type { Point } from '../types'
  * Supported sources:
  *  - 'touch'     : native DOM Touch events (production Android WebView)
  *  - 'mouse'     : single-point mouse input (dev/testing)
- *  - 'websocket' : injected touch frames from a local WS server (hardware bridge)
  */
 
-export type InputSource = 'touch' | 'mouse' | 'websocket'
+export type InputSource = 'touch' | 'mouse'
 
 export type TouchFrameCallback = (points: Point[]) => void
 
@@ -18,7 +17,6 @@ export class InputAdapter {
   private source: InputSource
   private onFrame: TouchFrameCallback
   private target: HTMLElement | null = null
-  private ws: WebSocket | null = null
 
   constructor(source: InputSource, onFrame: TouchFrameCallback) {
     this.source = source
@@ -47,25 +45,6 @@ export class InputAdapter {
     this.target.removeEventListener('mousemove', this.handleMouse)
     this.target.removeEventListener('mousedown', this.handleMouse)
     this.target = null
-
-    if (this.ws) {
-      this.ws.close()
-      this.ws = null
-    }
-  }
-
-  connectWebSocket(url: string): void {
-    this.ws = new WebSocket(url)
-    this.ws.onmessage = (ev) => {
-      try {
-        const data = JSON.parse(ev.data as string)
-        if (data.type === 'TOUCH_FRAME' && Array.isArray(data.points)) {
-          this.onFrame(data.points as Point[])
-        }
-      } catch {
-        // Ignore malformed messages
-      }
-    }
   }
 
   /** Inject a touch frame directly (used in testing and simulation) */

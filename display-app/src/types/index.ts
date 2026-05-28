@@ -71,13 +71,3 @@ export interface GameState {
   chosenCoasterId: string | null
   chosenUserId: string | null
 }
-
-// ─── WebSocket message shapes ─────────────────────────────────────────────────
-
-export type WsMessage =
-  | { type: 'SESSION_START'; payload: { userCount: number } }
-  | { type: 'SESSION_END'; payload: Record<string, never> }
-  | { type: 'ORDER_UPDATE'; payload: { orderId: string; status: OrderStatus } }
-  | { type: 'COASTER_ASSIGN'; payload: { coasterId: string; drinkId: string } }
-  | { type: 'GAME_START'; payload: { gameType: GameType } }
-  | { type: 'GAME_END'; payload: Record<string, never> }

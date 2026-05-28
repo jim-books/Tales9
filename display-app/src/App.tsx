@@ -9,7 +9,7 @@ import { CANVAS_SIZE, CalibrationMapper } from './engine/CalibrationMapper'
 import { TrackingEngine } from './engine/TrackingEngine'
 import { AnimationDispatcher } from './engine/AnimationDispatcher'
 import { InputAdapter } from './engine/InputAdapter'
-import type { WsMessage, GameType } from './types'
+import type { GameType } from './types'
 import type { FrameDiagnosis } from './engine/TrackingEngine'
 import {
   listenToSession,
@@ -47,7 +47,6 @@ function MainView(): JSX.Element {
   })
   const [trackingSurface, setTrackingSurface] = useState<HTMLDivElement | null>(null)
 
-  const wsRef = useRef<WebSocket | null>(null)
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
   const demoDrinkOverridesRef = useRef(demoDrinkOverrides)
@@ -213,52 +212,6 @@ function MainView(): JSX.Element {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [startSession, endSession, startGame, endGame])
-
-  useEffect(() => {
-    const url =
-      (import.meta.env.VITE_WS_URL as string | undefined) ?? 'ws://localhost:8080/ws'
-
-    let ws: WebSocket
-    try {
-      ws = new WebSocket(url)
-    } catch {
-      // WebSocket unavailable (e.g. test/non-browser env) — degrade silently
-      return
-    }
-    wsRef.current = ws
-
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data as string) as WsMessage
-        if (msg.type === 'SESSION_START') {
-          startSession(msg.payload.userCount)
-        } else if (msg.type === 'SESSION_END') {
-          endSession()
-        } else if (msg.type === 'ORDER_UPDATE') {
-          updateOrderStatus(msg.payload.orderId, msg.payload.status)
-        } else if (msg.type === 'COASTER_ASSIGN') {
-          assignDrinkToCoaster(msg.payload.coasterId, msg.payload.drinkId)
-          dispatcherRef.current?.assignDrink(msg.payload.coasterId, msg.payload.drinkId)
-          linkOrderToCoaster(msg.payload.drinkId, msg.payload.coasterId)
-        } else if (msg.type === 'GAME_START') {
-          startGame(msg.payload.gameType)
-        } else if (msg.type === 'GAME_END') {
-          endGame()
-        }
-      } catch {
-        // Ignore malformed messages
-      }
-    }
-
-    ws.onerror = () => {
-      // Silently degrade — core session flow continues without the backend
-    }
-
-    return () => {
-      ws.close()
-      wsRef.current = null
-    }
-  }, [startSession, endSession, updateOrderStatus, assignDrinkToCoaster, linkOrderToCoaster, startGame, endGame])
 
   // Firestore listeners: session control + coaster assignments pushed from iOS
   useEffect(() => {

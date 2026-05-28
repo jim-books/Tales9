@@ -12,7 +12,7 @@ Three separate, independently-runnable components:
 
 1. **[SmartTableAI (Bartender)/](SmartTableAI%20(Bartender)/)** — iOS Swift/SwiftUI app for bar staff to configure the table, assign brands/drinks, and monitor system status. Uses Firebase Firestore for persistence.
 2. **[display-app/](display-app/)** — Guest-facing React+TypeScript+PixiJS kiosk app. Runs fullscreen on the 33.2-inch 1900×1900 Android table display. Core build target.
-3. **[Websocket Demo/](Websocket%20Demo/)** — Node.js WebSocket bridge server running locally on Mac. Relays real-time config/order events between iOS and web.
+3. **[archive/Websocket Demo/](archive/Websocket%20Demo/)** — Archived Node.js WebSocket bridge server formerly used for local Mac demo relay (real-time config/order events between iOS and web).
 
 ---
 
@@ -139,10 +139,10 @@ interface DrinkProfile {
 
 ## Other Components
 
-### WebSocket Demo Server
+### Archived WebSocket Demo Server
 
 ```bash
-cd "Websocket Demo"
+cd "archive/Websocket Demo"
 npm install
 node demo-ws-server.js   # starts on port 8080
 ```
