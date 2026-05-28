@@ -23,7 +23,6 @@ function MainView(): JSX.Element {
   const orders = useAppStore((s) => s.orders)
   const startSession = useAppStore((s) => s.startSession)
   const endSession = useAppStore((s) => s.endSession)
-  const updateOrderStatus = useAppStore((s) => s.updateOrderStatus)
   const assignDrinkToCoaster = useAppStore((s) => s.assignDrinkToCoaster)
   const upsertCoaster = useAppStore((s) => s.upsertCoaster)
   const removeCoaster = useAppStore((s) => s.removeCoaster)

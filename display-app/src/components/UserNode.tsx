@@ -128,18 +128,11 @@ export function panelAnchorStyleForEdge(edge: UserEdge): React.CSSProperties {
 }
 
 function panelTransformOriginForEdge(
-  edge: UserEdge,
+  _edge: UserEdge,
 ): React.CSSProperties['transformOrigin'] {
-  switch (edge) {
-    case 'bottom':
-      return 'center bottom'
-    case 'top':
-      return 'center top'
-    case 'left':
-      return 'left center'
-    case 'right':
-      return 'right center'
-  }
+  // Keep the rotated panel centered within its wrapper; anchoring is handled
+  // by the wrapper's positioning, not the transform origin.
+  return 'center center'
 }
 
 export function panelTransformForEdge(edge: UserEdge): string {
@@ -194,6 +187,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
   const panelTransformOrigin = panelTransformOriginForEdge(displayEdge)
   const panelTransform = panelTransformForEdge(displayEdge)
   const panelWrapperSize = panelWrapperSizeForEdge(displayEdge)
+  const panelExpandAnimationName = `panelExpand-${node.id}`
 
   const left = node.position.x * canvasSize
   const top = node.position.y * canvasSize
@@ -494,6 +488,9 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             ...panelWrapperSize,
             zIndex: 1,
             pointerEvents: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
           onTouchStart={stopPanelTouchPropagation}
           onTouchMove={stopPanelTouchPropagation}
@@ -515,7 +512,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
               flexDirection: 'column',
               transform: `${panelTransform} scale(${PANEL_SCALE})`,
               transformOrigin: panelTransformOrigin,
-              animation: 'panelExpand 0.2s ease-out',
+              animation: `${panelExpandAnimationName} 0.2s ease-out`,
               pointerEvents: 'auto',
             }}
             onTouchStart={stopPanelTouchPropagation}
@@ -529,7 +526,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       )}
 
       <style>{`
-        @keyframes panelExpand {
+        @keyframes ${panelExpandAnimationName} {
           from { opacity: 0; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE * 0.92)}; }
           to   { opacity: 1; transform: ${panelAnimatedTransform(displayEdge, PANEL_SCALE)}; }
         }
