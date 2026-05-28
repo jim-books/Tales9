@@ -2,19 +2,23 @@ import { useAppStore } from '../store/useAppStore'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import type { GameType } from '../types'
 import type { FrameDiagnosis } from '../engine/TrackingEngine'
+import type { MappingMode } from '../data/coasterDrinkMapping'
 
 const px = (n: number): string => Math.round(n).toString()
 const norm = (n: number): string => n.toFixed(3)
 const ratio = (n: number): string => n.toFixed(3)
-const stateGlyph = (state: 'preview' | 'confirmed' | 'inactive'): string =>
-  state === 'confirmed' ? '◉' : state === 'preview' ? '◌' : '○'
+const stateGlyph = (state: 'preview' | 'confirmed' | 'lost' | 'inactive'): string => {
+  if (state === 'confirmed') return '◉'
+  if (state === 'preview') return '◌'
+  if (state === 'lost') return '◍'
+  return '○'
+}
 
 export interface DebugPanelProps {
   activeCoasterIds: Set<string>
   frameDiagnosis: FrameDiagnosis
-  demoDrinkOptions: Array<{ id: string; label: string }>
-  demoDrinkOverrides: { 0: string; 1: string }
-  onSetDemoDrinkOverride: (coasterIdx: 0 | 1, drinkId: string) => void
+  mappingMode: MappingMode
+  onSetMappingMode: (mode: MappingMode) => void
   onStartSession: () => void
   onEndSession: () => void
   onToggleCoaster: (idx: number) => void
@@ -23,6 +27,11 @@ export interface DebugPanelProps {
   onClose: () => void
   showAmbientPreview: boolean
   onToggleAmbientPreview: () => void
+  captureTargetTemplateId: string
+  onSetCaptureTargetTemplateId: (value: string) => void
+  capturedSampleCount: number
+  onResetCapturedSamples: () => void
+  derivedTemplateSpecText: string
 }
 
 /**
@@ -30,16 +39,15 @@ export interface DebugPanelProps {
  *
  * Combined debug/demo panel showing live system state + action buttons for demo flow.
  * - Session control buttons (start/end)
- * - Coaster toggle buttons (1-4) with active state indicators
+ * - Coaster toggle buttons (1-6) with active state indicators
  * - Game control buttons (start truth/kings/end)
  * - Full diagnostics display (same as DiagnosticsOverlay)
  */
 export function DebugPanel({
   activeCoasterIds,
   frameDiagnosis,
-  demoDrinkOptions,
-  demoDrinkOverrides,
-  onSetDemoDrinkOverride,
+  mappingMode,
+  onSetMappingMode,
   onStartSession,
   onEndSession,
   onToggleCoaster,
@@ -48,14 +56,17 @@ export function DebugPanel({
   onClose,
   showAmbientPreview,
   onToggleAmbientPreview,
+  captureTargetTemplateId,
+  onSetCaptureTargetTemplateId,
+  capturedSampleCount,
+  onResetCapturedSamples,
+  derivedTemplateSpecText,
 }: DebugPanelProps): JSX.Element {
   const sessionActive = useAppStore((s) => s.sessionActive)
   const userNodes = useAppStore((s) => s.userNodes)
   const coasters = useAppStore((s) => s.coasters)
   const gameState = useAppStore((s) => s.gameState)
   const orders = useAppStore((s) => s.orders)
-
-  const DEMO_DRINKS = ['Pisco-Colada', 'Espresso Martini', 'Momo Sour', 'Apple Tart']
 
   const buttonStyle = (active: boolean) => ({
     padding: '6px 12px',
@@ -171,71 +182,27 @@ export function DebugPanel({
             {showAmbientPreview ? '◉' : '○'} Ambient Preview (placeholder)
           </button>
         </div>
-        <div
-          style={{
-            marginBottom: 8,
-            padding: '8px 10px',
-            borderRadius: 6,
-            border: '1px solid #00ff8833',
-            background: 'rgba(0,255,136,0.04)',
-          }}
-        >
-          <div style={{ marginBottom: 6 }}>
-            {'Tracked Coaster 1 animation override'}
-          </div>
-          <select
-            value={demoDrinkOverrides[0]}
-            onChange={(e) => onSetDemoDrinkOverride(0, e.target.value)}
-            style={{
-              width: '100%',
-              background: 'rgba(0,0,0,0.75)',
-              color: '#00ff88',
-              border: '1px solid #00ff8866',
-              borderRadius: 4,
-              padding: '4px 6px',
-              fontFamily: 'monospace',
-              fontSize: 12,
-              marginBottom: 8,
-            }}
+        <div style={{ marginBottom: 4 }}>{'── Coaster Mapping Source ──'}</div>
+        <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => onSetMappingMode('hardcoded')}
+            style={buttonStyle(mappingMode === 'hardcoded')}
           >
-            <option value="">(empty / backend assignment)</option>
-            {demoDrinkOptions.map((option) => (
-              <option key={`c1-${option.id}`} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          <div style={{ marginBottom: 6 }}>
-            {'Tracked Coaster 2 animation override'}
-          </div>
-          <select
-            value={demoDrinkOverrides[1]}
-            onChange={(e) => onSetDemoDrinkOverride(1, e.target.value)}
-            style={{
-              width: '100%',
-              background: 'rgba(0,0,0,0.75)',
-              color: '#00ff88',
-              border: '1px solid #00ff8866',
-              borderRadius: 4,
-              padding: '4px 6px',
-              fontFamily: 'monospace',
-              fontSize: 12,
-            }}
+            Hardcoded (1-6)
+          </button>
+          <button
+            onClick={() => onSetMappingMode('firebase')}
+            style={buttonStyle(mappingMode === 'firebase')}
           >
-            <option value="">(empty / backend assignment)</option>
-            {demoDrinkOptions.map((option) => (
-              <option key={`c2-${option.id}`} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            Firebase Mapping
+          </button>
         </div>
 
-        <div style={{ marginBottom: 4 }}>{'── Demo Coasters (1–4) ──'}</div>
+        <div style={{ marginBottom: 4 }}>{'── Demo Coasters (1–6) ──'}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          {DEMO_DRINKS.map((drink, idx) => {
-            const id = `demo-coaster-${idx}`
+          {Array.from({ length: 6 }, (_, idx) => {
+            const coasterNumber = idx + 1
+            const id = `demo-coaster-${coasterNumber}`
             const isActive = activeCoasterIds.has(id)
             return (
               <button
@@ -243,7 +210,7 @@ export function DebugPanel({
                 onClick={() => onToggleCoaster(idx)}
                 style={buttonStyle(isActive)}
               >
-                {idx + 1} {drink}
+                Coaster {coasterNumber}
               </button>
             )
           })}
@@ -361,6 +328,62 @@ export function DebugPanel({
             </div>
           ))
         )}
+        <div>{'─── Template Capture ─────────────────\n'}</div>
+        <div style={{ marginBottom: 8, opacity: 0.92 }}>
+          {'  auto-capture: when raw touch points count = 3'}
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          {`  targetId: `}
+          <input
+            value={captureTargetTemplateId}
+            onChange={(e) => onSetCaptureTargetTemplateId(e.target.value)}
+            placeholder="coaster-3"
+            style={{
+              width: 180,
+              background: 'rgba(0,0,0,0.75)',
+              color: '#00ff88',
+              border: '1px solid #00ff8866',
+              borderRadius: 4,
+              padding: '3px 6px',
+              fontFamily: 'monospace',
+              fontSize: 11,
+              marginLeft: 4,
+            }}
+          />
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          {`  samples: ${capturedSampleCount}`}
+          <button
+            onClick={onResetCapturedSamples}
+            style={{
+              ...actionButtonStyle,
+              padding: '3px 8px',
+              marginLeft: 10,
+              fontSize: 10,
+            }}
+          >
+            reset
+          </button>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 4 }}>{'  generated spec:'}</div>
+          <textarea
+            value={derivedTemplateSpecText}
+            readOnly
+            style={{
+              width: '100%',
+              minHeight: 90,
+              background: 'rgba(0,0,0,0.75)',
+              color: '#00ff88',
+              border: '1px solid #00ff8866',
+              borderRadius: 6,
+              padding: '6px 8px',
+              fontFamily: 'monospace',
+              fontSize: 11,
+              resize: 'vertical',
+            }}
+          />
+        </div>
         <div>{'─── User Nodes ───────────────────────\n'}</div>
         {userNodes.length === 0 ? (
           <div>{'  (none)\n'}</div>

@@ -11,6 +11,12 @@ import { AnimationDispatcher } from './engine/AnimationDispatcher'
 import { InputAdapter } from './engine/InputAdapter'
 import type { GameType } from './types'
 import type { FrameDiagnosis } from './engine/TrackingEngine'
+import type { CoasterTouchSignature } from './types'
+import { deriveTemplateSpecFromSignatures } from './engine/CoasterTemplates'
+import {
+  hardcodedDrinkIdForCoaster,
+  type MappingMode,
+} from './data/coasterDrinkMapping'
 import {
   listenToSession,
   listenToCoasterAssignments,
@@ -33,26 +39,19 @@ function MainView(): JSX.Element {
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [showAmbientPreview, setShowAmbientPreview] = useState(false)
-  const [demoDrinkOverrides, setDemoDrinkOverrides] = useState<{
-    0: string
-    1: string
-  }>({
-    0: '',
-    1: '',
-  })
+  const [mappingMode, setMappingMode] = useState<MappingMode>('hardcoded')
   const [frameDiagnosis, setFrameDiagnosis] = useState<FrameDiagnosis>({
     rawTouchPoints: [],
     clusters: [],
   })
   const [trackingSurface, setTrackingSurface] = useState<HTMLDivElement | null>(null)
+  const [captureTargetTemplateId, setCaptureTargetTemplateId] = useState('coaster-3')
+  const [capturedSignatures, setCapturedSignatures] = useState<CoasterTouchSignature[]>([])
 
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
-  const demoDrinkOverridesRef = useRef(demoDrinkOverrides)
-
-  useEffect(() => {
-    demoDrinkOverridesRef.current = demoDrinkOverrides
-  }, [demoDrinkOverrides])
+  const hasCapturedCurrentThreeTouchRef = useRef(false)
+  const lastAutoCaptureAtRef = useRef(0)
 
   // Wire InputAdapter → TrackingEngine → store + AnimationDispatcher
   useEffect(() => {
@@ -66,33 +65,38 @@ function MainView(): JSX.Element {
       const tracked = frame.coasters
       setFrameDiagnosis(tracker.getLastDiagnosis())
 
-      for (const coaster of tracked) {
-        if (coaster.active) {
-          upsertCoaster({
-            id: coaster.id,
-            signature: coaster.signature,
-            centroid: coaster.centroid,
-            detectionState: coaster.state,
-          })
-        } else {
-          removeCoaster(coaster.id)
+      if (points.length === 3) {
+        const now = Date.now()
+        const isCooldownElapsed = now - lastAutoCaptureAtRef.current >= 300
+        if (!hasCapturedCurrentThreeTouchRef.current && isCooldownElapsed) {
+          setCapturedSignatures((prev) => [
+            ...prev,
+            [points[0], points[1], points[2]],
+          ])
+          lastAutoCaptureAtRef.current = now
+          hasCapturedCurrentThreeTouchRef.current = true
         }
+      } else {
+        hasCapturedCurrentThreeTouchRef.current = false
+      }
+
+      for (const coaster of tracked) {
+        upsertCoaster({
+          id: coaster.id,
+          signature: coaster.signature,
+          centroid: coaster.centroid,
+          detectionState: coaster.state,
+        })
       }
 
       for (const event of frame.events) {
         if (event.type === 'confirmed') {
-          const coasterIdx =
-            event.coasterId === 'coaster-1'
-              ? 0
-              : event.coasterId === 'coaster-2'
-                ? 1
-                : null
-          const debugOverride =
-            coasterIdx === null ? '' : demoDrinkOverridesRef.current[coasterIdx]
           const existingDrinkId = useAppStore
             .getState()
             .coasters.find((c) => c.id === event.coasterId)?.drinkId
-          const resolvedDrinkId = existingDrinkId || debugOverride || null
+          const resolvedDrinkId = mappingMode === 'hardcoded'
+            ? hardcodedDrinkIdForCoaster(event.coasterId)
+            : existingDrinkId ?? null
 
           if (resolvedDrinkId) {
             assignDrinkToCoaster(event.coasterId, resolvedDrinkId)
@@ -101,6 +105,7 @@ function MainView(): JSX.Element {
           dispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
           arriveOrderByCoaster(event.coasterId)
         } else if (event.type === 'removed') {
+          removeCoaster(event.coasterId)
           dispatcher.onCoasterRemoved(event.coasterId)
         }
       }
@@ -114,7 +119,14 @@ function MainView(): JSX.Element {
       adapter.detach()
       dispatcherRef.current = null
     }
-  }, [upsertCoaster, removeCoaster, assignDrinkToCoaster, arriveOrderByCoaster, trackingSurface])
+  }, [
+    upsertCoaster,
+    removeCoaster,
+    assignDrinkToCoaster,
+    arriveOrderByCoaster,
+    trackingSurface,
+    mappingMode,
+  ])
 
   // Toggle debug panel with 'D' key
   useEffect(() => {
@@ -128,27 +140,18 @@ function MainView(): JSX.Element {
   // ── Demo keyboard shortcuts (bypass WebSocket for presenting without backend) ─
   // S         → start session with 4 users      (replaces SESSION_START)
   // E         → end session                      (replaces SESSION_END)
-  // 1 / 2 / 3 / 4 → toggle demo coaster + drink (replaces COASTER_ASSIGN)
-  //   coaster 1 = pisco-colada (tropical)   — left
-  //   coaster 2 = espresso-martini (bold)   — top
-  //   coaster 3 = momo-sour (energetic)     — right
-  //   coaster 4 = apple-tart (elegant)      — bottom
+  // 1 / 2 / 3 / 4 / 5 / 6 → toggle demo coaster (replaces COASTER_ASSIGN)
   // T         → start Truth or Dare game    (replaces GAME_START)
   // K         → start King's Game           (replaces GAME_START)
   // G         → end game                    (replaces GAME_END)
   // D         → toggle debug panel
-  const DEMO_DRINKS = ['pisco-colada', 'espresso-martini', 'momo-sour', 'apple-tart']
-  const DEMO_DRINK_OPTIONS = [
-    { id: 'apple-tart', label: 'Apple Tart' },
-    { id: 'pisco-colada', label: 'Pisco Colada' },
-    { id: 'espresso-martini', label: 'Espresso Martini' },
-    { id: 'momo-sour', label: 'Momo Sour' },
-  ]
   const DEMO_CENTROIDS = [
-    { x: 475,  y: 950  }, // 1 — left
-    { x: 950,  y: 475  }, // 2 — top
-    { x: 1425, y: 950  }, // 3 — right
-    { x: 950,  y: 1425 }, // 4 — bottom
+    { x: 475, y: 950 },   // 1 — left
+    { x: 950, y: 475 },   // 2 — top
+    { x: 1425, y: 950 },  // 3 — right
+    { x: 950, y: 1425 },  // 4 — bottom
+    { x: 650, y: 650 },   // 5 — upper-left inner
+    { x: 1250, y: 1250 }, // 6 — lower-right inner
   ]
 
   // Equilateral-ish triangle around centroid (≈40 px radius) for signature
@@ -162,10 +165,11 @@ function MainView(): JSX.Element {
   ]
 
   const handleToggleCoaster = (idx: number) => {
-    const id = `demo-coaster-${idx}`
-    const overrideDrinkId = (idx === 0 || idx === 1) ? demoDrinkOverrides[idx] : ''
-    const drinkId = overrideDrinkId || DEMO_DRINKS[idx] || null
+    const coasterNumber = idx + 1
+    const id = `demo-coaster-${coasterNumber}`
+    const drinkId = hardcodedDrinkIdForCoaster(id)
     const centroid = DEMO_CENTROIDS[idx]
+    if (!centroid) return
     if (activeCoasterIdsRef.current.has(id)) {
       // Remove existing demo coaster
       removeCoaster(id)
@@ -183,12 +187,26 @@ function MainView(): JSX.Element {
     }
   }
 
-  const handleSetDemoDrinkOverride = (coasterIdx: 0 | 1, drinkId: string): void => {
-    setDemoDrinkOverrides((prev) => ({
-      ...prev,
-      [coasterIdx]: drinkId,
-    }))
+  const handleResetCapturedSamples = (): void => {
+    setCapturedSignatures([])
+    hasCapturedCurrentThreeTouchRef.current = false
+    lastAutoCaptureAtRef.current = 0
   }
+
+  const derivedTemplateSpec = deriveTemplateSpecFromSignatures(
+    captureTargetTemplateId.trim() || 'coaster-new',
+    capturedSignatures,
+  )
+  const derivedTemplateSpecText = derivedTemplateSpec
+    ? JSON.stringify(
+        {
+          sampleCount: derivedTemplateSpec.sampleCount,
+          ...derivedTemplateSpec.spec,
+        },
+        null,
+        2,
+      )
+    : '{\n  "sampleCount": 0,\n  "note": "Capture at least one cluster sample."\n}'
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -202,7 +220,7 @@ function MainView(): JSX.Element {
         startGame('kings_game')
       } else if (e.key === 'g' || e.key === 'G') {
         endGame()
-      } else if (['1', '2', '3', '4'].includes(e.key)) {
+      } else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
         const idx = parseInt(e.key) - 1
         handleToggleCoaster(idx)
       }
@@ -219,6 +237,7 @@ function MainView(): JSX.Element {
       else endSession()
     })
     const unsubAssign = listenToCoasterAssignments(({ coasterId, drinkId }) => {
+      if (mappingMode !== 'firebase') return
       assignDrinkToCoaster(coasterId, drinkId)
       dispatcherRef.current?.assignDrink(coasterId, drinkId)
       linkOrderToCoaster(drinkId, coasterId)
@@ -227,7 +246,7 @@ function MainView(): JSX.Element {
       unsubSession()
       unsubAssign()
     }
-  }, [startSession, endSession, assignDrinkToCoaster, linkOrderToCoaster])
+  }, [startSession, endSession, assignDrinkToCoaster, linkOrderToCoaster, mappingMode])
 
   return (
     <div
@@ -267,9 +286,8 @@ function MainView(): JSX.Element {
         <DebugPanel
           activeCoasterIds={activeCoasterIdsRef.current}
           frameDiagnosis={frameDiagnosis}
-          demoDrinkOptions={DEMO_DRINK_OPTIONS}
-          demoDrinkOverrides={demoDrinkOverrides}
-          onSetDemoDrinkOverride={handleSetDemoDrinkOverride}
+          mappingMode={mappingMode}
+          onSetMappingMode={setMappingMode}
           onStartSession={() => startSession(4)}
           onEndSession={() => endSession()}
           onToggleCoaster={handleToggleCoaster}
@@ -278,6 +296,11 @@ function MainView(): JSX.Element {
           onClose={() => setShowDebugPanel(false)}
           showAmbientPreview={showAmbientPreview}
           onToggleAmbientPreview={() => setShowAmbientPreview((v) => !v)}
+          captureTargetTemplateId={captureTargetTemplateId}
+          onSetCaptureTargetTemplateId={setCaptureTargetTemplateId}
+          capturedSampleCount={capturedSignatures.length}
+          onResetCapturedSamples={handleResetCapturedSamples}
+          derivedTemplateSpecText={derivedTemplateSpecText}
         />
       ) : (
         <button
