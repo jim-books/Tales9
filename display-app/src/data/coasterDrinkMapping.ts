@@ -1,11 +1,12 @@
 export type MappingMode = 'hardcoded' | 'firebase'
 
 const HARDCODED_DRINK_IDS = [
+  'apple-tart',
   'irish-coffee',
   'mango-sticky-rice',
   'peanut',
   'pistachio',
-  'salted-cc',
+  'strawberry-cheesecake',
   'tangyuan',
 ] as const
 

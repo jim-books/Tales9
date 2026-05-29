@@ -8,81 +8,47 @@ interface HomeScreenProps {
   onNavigate: (screen: PanelScreen) => void
 }
 
-const CARDS = [
-  {
-    view: 'about' as const,
-    title: 'About the Bar',
-    sub: 'Learn about Barcode and our story',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3" />
-        <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
-        <path d="M12 3v18" />
-        <path d="M4 9h16" />
-      </svg>
-    ),
-  },
-  {
-    view: 'quiz' as const,
-    title: 'Take a Quiz',
-    sub: 'Find your perfect drink based on your mood',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-        <rect x="9" y="3" width="6" height="4" rx="1" />
-        <path d="M9 12h6M9 16h4" />
-      </svg>
-    ),
-  },
-  {
-    view: 'game' as const,
-    title: 'Game',
-    sub: 'Start Truth or Dare or King\'s Game',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 7h10a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3z" />
-        <path d="M8 12h4M10 10v4" />
-        <circle cx="15.5" cy="11" r="1" />
-        <circle cx="17.5" cy="13" r="1" />
-      </svg>
-    ),
-  },
-  {
-    view: 'menu' as const,
-    title: 'Menu',
-    sub: 'Browse our full selection of drinks',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 6h18M3 12h18M3 18h18" />
-      </svg>
-    ),
-  },
-]
-
 export function HomeScreen({ onNavigate }: HomeScreenProps): JSX.Element {
   const { makePressHandlers } = usePressAction()
 
   return (
     <div className="home-screen">
-      <div className="home-logo">
-        <div className="home-logo__name">BARCODE</div>
-        <div className="home-logo__tagline">WHERE EVERY DRINK TELLS A STORY</div>
+      <div className="panel-brand">
+        <div className="panel-brand__name">BARCODE</div>
       </div>
 
-      <div className="home-cards">
-        {CARDS.map((card) => (
+      <div className="home-actions">
+        <button
+          className="home-btn home-btn--primary"
+          {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'menu' }))}
+        >
+          <span className="home-btn__title">Menu</span>
+          <span className="home-btn__sub">Explore Crafted Cocktails</span>
+        </button>
+
+        <div className="home-btn-row">
           <button
-            key={card.view}
-            className="home-card"
-            {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: card.view }))}
+            className="home-btn home-btn--secondary"
+            {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'game' }))}
           >
-            <span className="home-card__icon">{card.icon}</span>
-            <span className="home-card__text">
-              <span className="home-card__title">{card.title}</span>
-              <span className="home-card__sub">{card.sub}</span>
-            </span>
+            <span className="home-btn__title">Games</span>
+            <span className="home-btn__sub">Interactive Play</span>
           </button>
-        ))}
+          <button
+            className="home-btn home-btn--secondary"
+            {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'quiz' }))}
+          >
+            <span className="home-btn__title">Quiz</span>
+            <span className="home-btn__sub">Find Your Drink</span>
+          </button>
+        </div>
+
+        <button
+          className="home-btn home-btn--tertiary"
+          {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'about' }))}
+        >
+          <span className="home-btn__title">About the Bar</span>
+        </button>
       </div>
     </div>
   )

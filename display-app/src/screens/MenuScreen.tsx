@@ -3,6 +3,7 @@ import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
 import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface MenuScreenProps {
@@ -13,14 +14,12 @@ interface MenuScreenProps {
 
 type FilterCategory = DrinkCategory | 'ALL'
 
-const CATEGORY_LABELS: Record<FilterCategory, string> = {
-  ALL: 'All',
-  CLASSICS: 'Classics',
-  COFFEE_BASED: 'Coffee Based',
-  DESSERT_INSPIRED: 'Dessert Inspired',
-}
-
-const FILTER_OPTIONS: FilterCategory[] = ['ALL', 'CLASSICS', 'COFFEE_BASED', 'DESSERT_INSPIRED']
+const CATEGORY_OPTIONS: Array<{ value: FilterCategory; label: string }> = [
+  { value: 'ALL', label: 'All' },
+  { value: 'CLASSICS', label: 'Classics' },
+  { value: 'COFFEE_BASED', label: 'Coffee' },
+  { value: 'DESSERT_INSPIRED', label: 'Dessert' },
+]
 
 interface MenuDrinkMediaProps {
   drinkId: string
@@ -45,14 +44,17 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
       return
     }
 
+    const scrollRoot = containerRef.current.closest('.menu-screen__scroll')
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true)
-          observer.disconnect()
-        }
+        setInView(entry.isIntersecting)
       },
-      { rootMargin: '100px 0px', threshold: 0.1 },
+      {
+        root: scrollRoot instanceof Element ? scrollRoot : null,
+        rootMargin: '80px 0px',
+        threshold: 0.1,
+      },
     )
 
     observer.observe(containerRef.current)
@@ -66,16 +68,21 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
     })
   }, [canPlayVideo])
 
+  useEffect(() => {
+    if (canPlayVideo || !videoRef.current) return
+    videoRef.current.pause()
+  }, [canPlayVideo])
+
   return (
     <div
       ref={containerRef}
-      className="drink-card__media"
+      className="menu-drink-card__media"
       aria-label={`${drinkName} animation`}
     >
       {canPlayVideo ? (
         <video
           ref={videoRef}
-          className="drink-card__video"
+          className="menu-drink-card__video"
           src={mediaSrc ?? undefined}
           muted
           loop
@@ -85,132 +92,103 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
         />
       ) : (
         <div
-          className="drink-card__image-placeholder"
+          className="menu-drink-card__placeholder"
           style={{ background: fallbackGradient }}
         />
       )}
-      <div className="drink-card__media-overlay">
-        {loadError
-          ? 'Animation unavailable'
-          : canPlayVideo
-            ? 'Playing animation'
-            : inView
-              ? 'Loading animation'
-              : 'Scroll to load animation'}
-      </div>
     </div>
   )
 }
 
-export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuScreenProps): JSX.Element {
+export function MenuScreen({ userColor: _userColor, onNavigate, onOrder: _onOrder }: MenuScreenProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL')
-  const suppressClickUntilRef = useRef(0)
 
-  const runFromPointerPress = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>, action: () => void): void => {
-      if (e.pointerType === 'mouse') return
-
-      suppressClickUntilRef.current = Date.now() + 450
-      action()
-      e.preventDefault()
-      e.stopPropagation()
+  const handleCardPress = useCallback(
+    (drinkId: string) => {
+      onNavigate({ view: 'detail', drinkId })
     },
-    [],
+    [onNavigate],
   )
 
-  const runFromClick = useCallback((action: () => void): void => {
-    if (Date.now() < suppressClickUntilRef.current) return
-    action()
-  }, [])
-
-  const filtered = drinkCatalog.filter((d) => {
-    const matchesCat = activeCategory === 'ALL' || d.category === activeCategory
-    const matchesQuery = d.name.toLowerCase().includes(query.toLowerCase())
-    return matchesCat && matchesQuery
+  const filtered = drinkCatalog.filter((drink) => {
+    const matchesCategory = activeCategory === 'ALL' || drink.category === activeCategory
+    const matchesQuery =
+      drink.name.toLowerCase().includes(query.toLowerCase()) ||
+      drink.ingredients.some((item) => item.toLowerCase().includes(query.toLowerCase()))
+    return matchesCategory && matchesQuery
   })
 
   return (
-    <div className="screen">
-      <div className="screen-header">
-        <span className="screen-header__title" style={{ textAlign: 'center', flex: 1 }}>
-          Menu
-        </span>
-      </div>
-      <div className="screen-body">
-        <div className="menu-header">
-          <div className="menu-header__title">BARCODE</div>
-          <div className="menu-header__subtitle">── COCKTAIL MENU ──</div>
+    <div className="screen menu-screen">
+      <div className="menu-screen__header">
+        <button
+          className="screen-back"
+          {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}
+          aria-label="Back to home"
+        >
+          ←
+        </button>
+        <div className="panel-brand panel-brand--compact">
+          <div className="panel-brand__name">BARCODE</div>
+          <div className="panel-brand__subtitle">Cocktail Menu</div>
         </div>
+      </div>
 
-        <div className="menu-search">
-          <span style={{ color: 'var(--color-muted)', fontSize: 14 }}>🔍</span>
+      <div className="menu-screen__toolbar">
+        <label className="menu-search">
+          <span className="menu-search__icon" aria-hidden="true">⌕</span>
           <input
-            type="text"
+            type="search"
             placeholder="Search cocktails..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search cocktails"
           />
-        </div>
+        </label>
 
-        <div className="menu-categories">
-          {FILTER_OPTIONS.map((cat) => (
+        <div className="menu-categories" role="tablist" aria-label="Drink categories">
+          {CATEGORY_OPTIONS.map(({ value, label }) => (
             <button
-              key={cat}
-              className={`menu-cat-btn${activeCategory === cat ? ' menu-cat-btn--active' : ''}`}
-              onPointerUp={(e) => runFromPointerPress(e, () => setActiveCategory(cat))}
-              onClick={() => runFromClick(() => setActiveCategory(cat))}
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={activeCategory === value}
+              className={`menu-cat-btn${activeCategory === value ? ' menu-cat-btn--active' : ''}`}
+              {...makePressHandlers<HTMLButtonElement>(() => setActiveCategory(value))}
             >
-              {CATEGORY_LABELS[cat]}
+              {label}
             </button>
           ))}
         </div>
+      </div>
 
-        {filtered.length === 0 && (
+      <div className="menu-screen__scroll">
+        {filtered.length === 0 ? (
           <div className="menu-empty">No cocktails found.</div>
-        )}
-
-        {filtered.map((drink) => (
-          <div key={drink.id} className="drink-card">
-            <MenuDrinkMedia
-              drinkId={drink.id}
-              drinkName={drink.name}
-              fallbackGradient={`linear-gradient(135deg, ${drink.colorPalette[0]}, ${drink.colorPalette[1]})`}
-            />
-            <div className="drink-card__body">
-              <span className="category-pill">{CATEGORY_LABELS[drink.category]}</span>
-              <div className="drink-card__name">{drink.name}</div>
-              <div className="drink-card__flavor">{drink.flavorProfile}</div>
-              <div className="drink-card__footer">
-                <span className="drink-card__price">${drink.price}</span>
-                <div className="drink-card__actions">
-                  <button
-                    className="btn-details"
-                    onPointerUp={(e) =>
-                      runFromPointerPress(e, () =>
-                        onNavigate({ view: 'detail', drinkId: drink.id }),
-                      )
-                    }
-                    onClick={() =>
-                      runFromClick(() =>
-                        onNavigate({ view: 'detail', drinkId: drink.id }),
-                      )
-                    }
-                  >
-                    Details
-                  </button>
-                  <button
-                    className="btn-order-sm"
-                    onPointerUp={(e) => runFromPointerPress(e, () => onOrder(drink.id))}
-                    onClick={() => runFromClick(() => onOrder(drink.id))}
-                  >
-                    Order
-                  </button>
+        ) : (
+          <div className="menu-grid">
+            {filtered.map((drink) => (
+              <button
+                key={drink.id}
+                type="button"
+                className="menu-drink-card"
+                {...makePressHandlers<HTMLButtonElement>(() => handleCardPress(drink.id))}
+              >
+                <MenuDrinkMedia
+                  drinkId={drink.id}
+                  drinkName={drink.name}
+                  fallbackGradient={`linear-gradient(160deg, ${drink.colorPalette[0]}88, ${drink.colorPalette[1]}44)`}
+                />
+                <div className="menu-drink-card__footer">
+                  <span className="menu-drink-card__name">{drink.name}</span>
+                  <span className="menu-drink-card__price">${drink.price}</span>
                 </div>
-              </div>
-            </div>
+              </button>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   )

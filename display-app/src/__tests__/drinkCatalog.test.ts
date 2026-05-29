@@ -27,6 +27,7 @@ describe('drinkCatalog', () => {
 
   it('contains at least one drink per category', () => {
     const categories = new Set(drinkCatalog.map((d) => d.category))
+    expect(categories.has('CLASSICS')).toBe(true)
     expect(categories.has('COFFEE_BASED')).toBe(true)
     expect(categories.has('DESSERT_INSPIRED')).toBe(true)
   })
@@ -40,7 +41,7 @@ describe('drinkCatalog', () => {
 
   it('getDrinkById returns correct drink', () => {
     const drink = getDrinkById('irish-coffee')
-    expect(drink?.name).toBe('IRISH COFFEE')
+    expect(drink?.name).toBe('SPICED IRISH COFFEE')
   })
 
   it('getDrinkById returns undefined for unknown id', () => {

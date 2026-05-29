@@ -25,8 +25,8 @@ const MAX_POS = 0.95
 const TAP_SLOP_PX = 16
 const EDGE_TIE_THRESHOLD = 0.03
 const APPROACH_INTENT_MIN_PX = 6
-const PANEL_WIDTH = 360
-const PANEL_HEIGHT = 480
+const PANEL_WIDTH = 600
+const PANEL_HEIGHT = 450
 const PANEL_SCALE = 1.05
 const NODE_VISIBLE_SIZE = 64
 const NODE_HITBOX_SCALE = 1.6
@@ -512,14 +512,10 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
           onTouchCancel={stopPanelTouchPropagation}
         >
           <div
+            className="panel-shell"
             style={{
               width: PANEL_WIDTH,
               height: PANEL_HEIGHT,
-              background: 'var(--color-panel)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 16,
               overflow: 'hidden',
               touchAction: 'pan-y',
               display: 'flex',
