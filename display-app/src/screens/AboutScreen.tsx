@@ -7,37 +7,57 @@ interface AboutScreenProps {
   onBack: () => void
 }
 
-const SECTIONS = [
-  {
-    heading: 'Our Story',
-    body: 'Barcode opened in Central, Hong Kong with a single mission: to reimagine how people experience cocktails. Born from a love of craftsmanship and cutting-edge hospitality, we blended artisanal drink-making with interactive technology to create something entirely new.',
-  },
-  {
-    heading: 'Our Philosophy',
-    body: 'We believe the best cocktail is more than a drink — it\'s a memory. Every recipe is designed to surprise and delight, using premium ingredients and precise technique. We source locally where possible and collaborate with regional distilleries to bring you flavours unique to Barcode.',
-  },
-  {
-    heading: 'What Makes Us Different',
-    body: 'The table you\'re sitting at is intelligent. Capacitive sensors beneath the surface detect the unique signature of each coaster, triggering animations and stories tied to your drink. Order through your personal interface, watch your drink come to life as it arrives, and let the table become part of your evening.',
-  },
+const OPENING_HOURS = [
+  { days: 'Tuesday – Thursday', hours: '6:00 PM – 2:00 AM' },
+  { days: 'Friday – Saturday', hours: '6:00 PM – 2:00 AM' },
+  { days: 'Sunday', hours: '6:00 PM – 12:00 AM' },
+  { days: 'Monday', hours: 'Closed' },
 ]
 
 export function AboutScreen({ userColor: _userColor, onBack }: AboutScreenProps): JSX.Element {
   const { makePressHandlers } = usePressAction()
 
   return (
-    <div className="screen">
-      <div className="screen-header">
-        <button className="screen-back" {...makePressHandlers<HTMLButtonElement>(onBack)}>←</button>
-        <span className="screen-header__title">About</span>
+    <div className="panel-page about-screen">
+      <div className="panel-brand">
+        <div className="panel-brand__name">BARCODE</div>
       </div>
-      <div className="screen-body">
-        {SECTIONS.map((s) => (
-          <div key={s.heading} className="about-section">
-            <h3>{s.heading}</h3>
-            <p>{s.body}</p>
-          </div>
-        ))}
+
+      <div className="panel-page__content">
+        <h2 className="panel-page__title">About Barcode</h2>
+
+        <div className="panel-page__body about-screen__sections">
+          <section className="about-block">
+            <h3 className="about-block__heading about-block__heading--cyan">Our Story</h3>
+            <div className="about-block__body">
+              <p>
+                Barcode is an immersive mixology lounge where craft cocktails meet interactive
+                art. Every drink unlocks pixel-perfect visuals on the table — a blend of
+                artisanal bartending and cutting-edge hospitality designed for memorable evenings.
+              </p>
+            </div>
+          </section>
+
+          <section className="about-block">
+            <h3 className="about-block__heading about-block__heading--red">Opening Hours</h3>
+            <ul className="about-hours">
+              {OPENING_HOURS.map((row) => (
+                <li key={row.days} className="about-hours__row">
+                  <span className="about-hours__days">{row.days}</span>
+                  <span className="about-hours__time">{row.hours}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        <button
+          type="button"
+          className="panel-page__exit"
+          {...makePressHandlers<HTMLButtonElement>(onBack)}
+        >
+          ← Return to Main
+        </button>
       </div>
     </div>
   )

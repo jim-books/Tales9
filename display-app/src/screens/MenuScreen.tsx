@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
-import type { DrinkCategory, UserColor } from '../types'
+import type { UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
 import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
+import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface MenuScreenProps {
@@ -10,17 +11,6 @@ interface MenuScreenProps {
   onNavigate: (screen: PanelScreen) => void
   onOrder: (drinkId: string) => void
 }
-
-type FilterCategory = DrinkCategory | 'ALL'
-
-const CATEGORY_LABELS: Record<FilterCategory, string> = {
-  ALL: 'All',
-  CLASSICS: 'Classics',
-  COFFEE_BASED: 'Coffee Based',
-  DESSERT_INSPIRED: 'Dessert Inspired',
-}
-
-const FILTER_OPTIONS: FilterCategory[] = ['ALL', 'CLASSICS', 'COFFEE_BASED', 'DESSERT_INSPIRED']
 
 interface MenuDrinkMediaProps {
   drinkId: string
@@ -89,127 +79,66 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
           style={{ background: fallbackGradient }}
         />
       )}
-      <div className="drink-card__media-overlay">
-        {loadError
-          ? 'Animation unavailable'
-          : canPlayVideo
-            ? 'Playing animation'
-            : inView
-              ? 'Loading animation'
-              : 'Scroll to load animation'}
-      </div>
     </div>
   )
 }
 
-export function MenuScreen({ userColor: _userColor, onNavigate, onOrder }: MenuScreenProps): JSX.Element {
-  const [query, setQuery] = useState('')
-  const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL')
-  const suppressClickUntilRef = useRef(0)
+function formatIngredients(ingredients: string[]): string {
+  return ingredients.map((i) => i.toUpperCase()).join(' · ')
+}
 
-  const runFromPointerPress = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>, action: () => void): void => {
-      if (e.pointerType === 'mouse') return
+export function MenuScreen({ userColor: _userColor, onNavigate, onOrder: _onOrder }: MenuScreenProps): JSX.Element {
+  const { makePressHandlers } = usePressAction()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
-      suppressClickUntilRef.current = Date.now() + 450
-      action()
-      e.preventDefault()
-      e.stopPropagation()
+  const handleCardPress = useCallback(
+    (drinkId: string) => {
+      setSelectedId(drinkId)
+      onNavigate({ view: 'detail', drinkId })
     },
-    [],
+    [onNavigate],
   )
 
-  const runFromClick = useCallback((action: () => void): void => {
-    if (Date.now() < suppressClickUntilRef.current) return
-    action()
-  }, [])
-
-  const filtered = drinkCatalog.filter((d) => {
-    const matchesCat = activeCategory === 'ALL' || d.category === activeCategory
-    const matchesQuery = d.name.toLowerCase().includes(query.toLowerCase())
-    return matchesCat && matchesQuery
-  })
-
   return (
-    <div className="screen">
-      <div className="screen-header">
-        <span className="screen-header__title" style={{ textAlign: 'center', flex: 1 }}>
-          Menu
-        </span>
+    <div className="screen menu-screen">
+      <div className="menu-screen__header">
+        <button
+          className="screen-back"
+          {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}
+          aria-label="Back to home"
+        >
+          ←
+        </button>
+        <div className="panel-brand panel-brand--compact">
+          <div className="panel-brand__name">BARCODE</div>
+          <div className="panel-brand__subtitle">Signature Cocktails</div>
+        </div>
       </div>
-      <div className="screen-body">
-        <div className="menu-header">
-          <div className="menu-header__title">BARCODE</div>
-          <div className="menu-header__subtitle">── COCKTAIL MENU ──</div>
-        </div>
 
-        <div className="menu-search">
-          <span style={{ color: 'var(--color-muted)', fontSize: 14 }}>🔍</span>
-          <input
-            type="text"
-            placeholder="Search cocktails..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="menu-categories">
-          {FILTER_OPTIONS.map((cat) => (
-            <button
-              key={cat}
-              className={`menu-cat-btn${activeCategory === cat ? ' menu-cat-btn--active' : ''}`}
-              onPointerUp={(e) => runFromPointerPress(e, () => setActiveCategory(cat))}
-              onClick={() => runFromClick(() => setActiveCategory(cat))}
-            >
-              {CATEGORY_LABELS[cat]}
-            </button>
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="menu-empty">No cocktails found.</div>
-        )}
-
-        {filtered.map((drink) => (
-          <div key={drink.id} className="drink-card">
+      <div className="screen-body menu-screen__body">
+        {drinkCatalog.map((drink) => (
+          <button
+            key={drink.id}
+            type="button"
+            className={`drink-card drink-card--v2${selectedId === drink.id ? ' drink-card--selected' : ''}`}
+            {...makePressHandlers<HTMLButtonElement>(() => handleCardPress(drink.id))}
+          >
             <MenuDrinkMedia
               drinkId={drink.id}
               drinkName={drink.name}
-              fallbackGradient={`linear-gradient(135deg, ${drink.colorPalette[0]}, ${drink.colorPalette[1]})`}
+              fallbackGradient={`linear-gradient(160deg, ${drink.colorPalette[0]}55, ${drink.colorPalette[1]}33)`}
             />
+            <span className="drink-card__checkbox" aria-hidden="true" />
             <div className="drink-card__body">
-              <span className="category-pill">{CATEGORY_LABELS[drink.category]}</span>
-              <div className="drink-card__name">{drink.name}</div>
-              <div className="drink-card__flavor">{drink.flavorProfile}</div>
-              <div className="drink-card__footer">
+              <div className="drink-card__row">
+                <span className="drink-card__name">{drink.name}</span>
                 <span className="drink-card__price">${drink.price}</span>
-                <div className="drink-card__actions">
-                  <button
-                    className="btn-details"
-                    onPointerUp={(e) =>
-                      runFromPointerPress(e, () =>
-                        onNavigate({ view: 'detail', drinkId: drink.id }),
-                      )
-                    }
-                    onClick={() =>
-                      runFromClick(() =>
-                        onNavigate({ view: 'detail', drinkId: drink.id }),
-                      )
-                    }
-                  >
-                    Details
-                  </button>
-                  <button
-                    className="btn-order-sm"
-                    onPointerUp={(e) => runFromPointerPress(e, () => onOrder(drink.id))}
-                    onClick={() => runFromClick(() => onOrder(drink.id))}
-                  >
-                    Order
-                  </button>
-                </div>
+              </div>
+              <div className="drink-card__ingredients">
+                {formatIngredients(drink.ingredients)}
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

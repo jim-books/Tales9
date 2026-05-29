@@ -25,7 +25,6 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
 
   if (state.phase === 'questions') {
     const q = quizQuestions[state.step]
-    const progress = (state.step / quizQuestions.length) * 100
 
     const handleAnswer = (value: string) => {
       const newAnswers = { ...state.answers, [q.id]: value }
@@ -38,83 +37,92 @@ export function QuizFlow({ userColor: _userColor, onOrder, onNavigate }: QuizFlo
     }
 
     return (
-      <div className="screen">
-        <div className="screen-header">
-          <button
-            className="screen-back"
-            {...makePressHandlers<HTMLButtonElement>(() => {
-              if (state.step === 0) {
-                onNavigate({ view: 'home' })
-              } else {
-                setState({ ...state, step: state.step - 1 })
-              }
-            })}
-          >
-            ←
-          </button>
-          <span className="screen-header__title">Drink Quiz</span>
+      <div className="quiz-screen">
+        <div className="panel-brand">
+          <div className="panel-brand__name">BARCODE</div>
         </div>
-        <div className="screen-body">
-          <div className="quiz-progress">
-            <div className="quiz-progress__fill" style={{ width: `${progress}%` }} />
+
+        <div className="quiz-screen__content">
+          <div className="quiz-screen__intro">
+            <h2 className="quiz-title">Flavor Profiler</h2>
+            <p className="quiz-step">
+              Question {state.step + 1}/{quizQuestions.length}
+            </p>
+            <p className="quiz-question">{q.question}</p>
           </div>
-          <div className="quiz-step-label">
-            Question {state.step + 1} of {quizQuestions.length}
-          </div>
-          <div className="quiz-question">{q.question}</div>
+
           <div className="quiz-options">
-            {q.options.map((opt) => (
-              <button
-                key={opt.value}
-                className="quiz-option"
-                {...makePressHandlers<HTMLButtonElement>(() => handleAnswer(opt.value))}
-              >
-                {opt.label}
-              </button>
-            ))}
+            <div className="quiz-options__grid">
+              {q.options.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className="quiz-option"
+                  {...makePressHandlers<HTMLButtonElement>(() => handleAnswer(opt.value))}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="quiz-option quiz-option--exit"
+              {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}
+            >
+              ← Exit Quiz
+            </button>
           </div>
         </div>
       </div>
     )
   }
 
-  // Result phase
   const drink = getDrinkById(state.drinkId)
 
   return (
-    <div className="screen">
-      <div className="screen-header">
-        <span className="screen-header__title" style={{ textAlign: 'center', flex: 1 }}>
-          Your Match
-        </span>
+    <div className="quiz-screen">
+      <div className="panel-brand">
+        <div className="panel-brand__name">BARCODE</div>
       </div>
-      <div className="screen-body">
-        <div className="quiz-result">
-          <div className="quiz-result__heading">Your Perfect Match</div>
-          <div className="quiz-result__icon">🍷</div>
-          <div className="quiz-result__drink">{drink?.name ?? state.drinkId}</div>
-          {drink && <p className="quiz-result__desc">{drink.description}</p>}
+
+      <div className="quiz-screen__content">
+        <div className="quiz-screen__intro">
+          <h2 className="quiz-title">Flavor Profiler</h2>
+          <p className="quiz-step">Your Match</p>
+
+          <div className="quiz-result">
+            <div className="quiz-result__drink">{drink?.name ?? state.drinkId}</div>
+            {drink && <p className="quiz-result__desc">{drink.description}</p>}
+          </div>
         </div>
 
-        {drink && (
-          <button className="btn-primary" {...makePressHandlers<HTMLButtonElement>(() => onOrder(drink.id))}>
-            Order This Drink
-          </button>
-        )}
-        <button
-          className="btn-secondary"
-          {...makePressHandlers<HTMLButtonElement>(() =>
-            setState({ phase: 'questions', step: 0, answers: {} })
+        <div className="quiz-options">
+          {drink && (
+            <button
+              type="button"
+              className="quiz-option"
+              {...makePressHandlers<HTMLButtonElement>(() => onOrder(drink.id))}
+            >
+              Order This Drink
+            </button>
           )}
-        >
-          Take Quiz Again
-        </button>
-        <button className="btn-secondary" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'menu' }))}>
-          View Full Menu
-        </button>
-        <button className="btn-ghost" {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}>
-          Back to Home
-        </button>
+          <button
+            type="button"
+            className="quiz-option"
+            {...makePressHandlers<HTMLButtonElement>(() =>
+              setState({ phase: 'questions', step: 0, answers: {} })
+            )}
+          >
+            Take Quiz Again
+          </button>
+          <button
+            type="button"
+            className="quiz-option quiz-option--exit"
+            {...makePressHandlers<HTMLButtonElement>(() => onNavigate({ view: 'home' }))}
+          >
+            ← Exit Quiz
+          </button>
+        </div>
       </div>
     </div>
   )

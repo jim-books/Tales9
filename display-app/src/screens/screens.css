@@ -1,3 +1,43 @@
+/* ─── Brand header ─────────────────────────────────────────────────────────── */
+
+.panel-brand {
+  text-align: center;
+  padding: 4px 0 0;
+  flex-shrink: 0;
+}
+
+.panel-brand--compact {
+  flex: 1;
+  padding: 0;
+}
+
+.panel-brand__name {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+  line-height: 1.1;
+}
+
+.panel-brand--compact .panel-brand__name {
+  font-size: 20px;
+  letter-spacing: 0.22em;
+}
+
+.panel-brand__subtitle {
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-top: 6px;
+  opacity: 0.9;
+}
+
 /* ─── Shared panel screen styles ─────────────────────────────────────────────── */
 
 .screen {
@@ -30,7 +70,7 @@
 .screen-back {
   background: none;
   border: none;
-  color: var(--user-color);
+  color: var(--brand-cyan);
   font-size: 18px;
   line-height: 1;
   padding: 4px 8px 4px 0;
@@ -53,17 +93,19 @@
 .btn-primary {
   display: block;
   width: 100%;
-  background: var(--user-color);
-  color: #000;
+  background: linear-gradient(135deg, var(--brand-red) 0%, var(--brand-red-dark) 100%);
+  color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 12px 20px;
+  font-family: var(--font-serif);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
   margin-top: 8px;
+  box-shadow: 0 4px 20px var(--brand-red-glow);
 }
 
 .btn-secondary {
@@ -116,83 +158,340 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 20px 16px 16px;
-  gap: 12px;
+  padding: 18px 22px 16px;
+  gap: 14px;
 }
 
-.home-logo {
-  text-align: center;
-}
-
-.home-logo__name {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-  color: var(--user-color);
-}
-
-.home-logo__tagline {
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-top: 4px;
-}
-
-.home-cards {
+.home-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
+  min-width: 0;
+  justify-content: center;
 }
 
-.home-card {
+.home-btn-row {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  gap: 10px;
+}
+
+.home-btn-row .home-btn {
   flex: 1;
 }
 
-.home-card:active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--user-color);
+.home-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  border-radius: 12px;
+  padding: 18px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.home-card__icon {
-  width: 32px;
-  height: 32px;
-  color: var(--user-color);
+.home-btn:active {
+  transform: scale(0.98);
+}
+
+.home-btn__title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.home-btn__sub {
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.3;
+}
+
+.home-btn--primary {
+  background: var(--btn-primary-gradient);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  min-height: 72px;
+}
+
+.home-btn--primary .home-btn__sub {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.home-btn--secondary {
+  background: var(--btn-secondary-gradient);
+  border: 1px solid var(--brand-navy-border);
+  min-height: 64px;
+}
+
+.home-btn--secondary .home-btn__title {
+  font-size: 13px;
+}
+
+.home-btn--tertiary {
+  background: var(--btn-tertiary-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 44px;
+  box-shadow: none;
+}
+
+.home-btn--tertiary .home-btn__title {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ─── Shared panel page layout (quiz, games, about) ─────────────────────────── */
+
+.panel-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px 24px 16px;
+  overflow: hidden;
+}
+
+.panel-page__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.panel-page__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.panel-page__title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.2;
   flex-shrink: 0;
 }
 
-.home-card__text {
-  flex: 1;
-  min-width: 0;
-}
-
-.home-card__title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text);
-}
-
-.home-card__sub {
-  font-size: 10px;
+.panel-page__subtitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   color: var(--color-muted);
-  margin-top: 3px;
-  line-height: 1.4;
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+
+.panel-page__exit {
+  width: 100%;
+  max-width: 520px;
+  flex-shrink: 0;
+  background: var(--btn-tertiary-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.panel-page__exit:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* ─── About screen ───────────────────────────────────────────────────────────── */
+
+.about-screen__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.about-screen .panel-page__title {
+  margin: 0 0 4px;
+}
+
+.about-block {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.about-block__heading {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.about-block__heading--cyan {
+  color: var(--brand-cyan);
+}
+
+.about-block__heading--red {
+  color: #6b1520;
+}
+
+.about-block__body {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+.about-block__body p {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  line-height: 1.65;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.about-hours {
+  list-style: none;
+  padding: 0 8px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.about-hours__row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.about-hours__days {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+.about-hours__time {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--color-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── Game screen ────────────────────────────────────────────────────────────── */
+
+.game-screen__main {
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.game-screen__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--btn-secondary-gradient);
+  border-radius: 12px;
+  padding: 20px 14px;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  min-height: 110px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.game-card:active {
+  transform: scale(0.98);
+}
+
+.game-card--cyan {
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.08);
+}
+
+.game-card--red {
+  border: 1px solid rgba(91, 21, 32, 0.65);
+  box-shadow: 0 0 16px rgba(91, 21, 32, 0.12);
+}
+
+.game-card__title {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.game-card__sub {
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+/* ─── About screen (legacy) ──────────────────────────────────────────────────── */
 
 .about-section {
   margin-bottom: 20px;
@@ -343,9 +642,11 @@
 }
 
 .drink-card__price {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--user-color);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-red);
+  flex-shrink: 0;
 }
 
 .drink-card__actions {
@@ -451,62 +752,109 @@
 
 /* ─── Quiz flow ──────────────────────────────────────────────────────────────── */
 
-.quiz-progress {
-  height: 3px;
-  background: var(--color-border);
-  border-radius: 2px;
-  margin-bottom: 20px;
+.quiz-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px 24px 16px;
   overflow: hidden;
 }
 
-.quiz-progress__fill {
-  height: 100%;
-  background: var(--user-color);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+.quiz-screen__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  overflow: hidden;
 }
 
-.quiz-step-label {
-  font-size: 9px;
+.quiz-screen__intro {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 520px;
+}
+
+.quiz-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+
+.quiz-step {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   color: var(--color-muted);
-  margin-bottom: 8px;
+  margin: 0 0 6px;
 }
 
 .quiz-question {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 16px;
-  line-height: 1.4;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.45;
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 .quiz-options {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  flex-shrink: 0;
+}
+
+.quiz-options__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .quiz-option {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
+  background: var(--btn-secondary-gradient);
+  border: 1px solid var(--brand-navy-border);
   border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 10px 8px;
+  font-family: var(--font-serif);
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text);
   cursor: pointer;
-  text-align: left;
-  transition: background 0.1s, border-color 0.1s;
+  text-align: center;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease;
 }
 
 .quiz-option:active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--user-color);
+  transform: scale(0.98);
+  background: linear-gradient(160deg, rgba(32, 38, 54, 0.98) 0%, rgba(18, 20, 30, 0.99) 100%);
+}
+
+.quiz-option--exit {
+  background: var(--btn-tertiary-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 44px;
+  font-size: 11px;
+  color: var(--color-muted);
+  letter-spacing: 0.1em;
 }
 
 .quiz-result {
@@ -514,44 +862,34 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 16px 0;
-}
-
-.quiz-result__heading {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-bottom: 6px;
-}
-
-.quiz-result__icon {
-  font-size: 32px;
-  margin-bottom: 10px;
+  padding: 6px 0 0;
+  flex-shrink: 0;
 }
 
 .quiz-result__drink {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--user-color);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .quiz-result__desc {
+  font-family: var(--font-sans);
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--color-muted);
-  margin-bottom: 20px;
+  max-width: 460px;
+  margin: 0;
 }
 
 /* ─── Order status ───────────────────────────────────────────────────────────── */
 
 .order-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
+  background: var(--btn-secondary-gradient);
+  border: 1px solid var(--brand-navy-border);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 10px;
@@ -602,7 +940,132 @@
   margin-bottom: 16px;
 }
 
-/* ─── Menu header ────────────────────────────────────────────────────────────── */
+/* ─── Menu screen v2 ─────────────────────────────────────────────────────────── */
+
+.menu-screen__header {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 16px 8px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.menu-screen__body {
+  padding: 8px 16px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-content: start;
+}
+
+.drink-card--v2 {
+  position: relative;
+  display: block;
+  width: 100%;
+  background: var(--btn-secondary-gradient);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.drink-card--v2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 60%;
+  height: 50%;
+  background: radial-gradient(ellipse at bottom right, var(--brand-red-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.drink-card--v2:active {
+  border-color: rgba(196, 30, 58, 0.35);
+}
+
+.drink-card--selected {
+  border-color: rgba(34, 211, 238, 0.35);
+}
+
+.drink-card--v2 .drink-card__media {
+  height: 88px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+}
+
+.drink-card--v2 .drink-card__image-placeholder {
+  height: 88px;
+  opacity: 0.6;
+}
+
+.drink-card__checkbox {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  background: transparent;
+  z-index: 1;
+}
+
+.drink-card--selected .drink-card__checkbox {
+  background: rgba(34, 211, 238, 0.2);
+  border-color: var(--brand-cyan);
+  box-shadow: inset 0 0 0 2px var(--brand-cyan);
+}
+
+.drink-card--v2 .drink-card__body {
+  position: relative;
+  padding: 12px 14px 14px;
+  z-index: 1;
+}
+
+.drink-card__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.drink-card--v2 .drink-card__name {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.drink-card__ingredients {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+/* ─── Menu header (legacy) ───────────────────────────────────────────────────── */
 
 .menu-header {
   text-align: center;
@@ -624,55 +1087,4 @@
   margin-top: 2px;
 }
 
-/* ─── Game portal ────────────────────────────────────────────────────────────── */
-
-.game-portal {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.game-portal__title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text);
-}
-
-.game-portal__subtitle {
-  font-size: 10px;
-  color: var(--color-muted);
-  margin-bottom: 2px;
-}
-
-.game-portal__card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.game-portal__card:active {
-  border-color: var(--user-color);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.game-portal__card-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text);
-}
-
-.game-portal__card-sub {
-  font-size: 10px;
-  color: var(--color-muted);
-  line-height: 1.4;
-}
+/* ─── Menu header (legacy) ───────────────────────────────────────────────────── */
