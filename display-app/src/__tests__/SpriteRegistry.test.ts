@@ -4,6 +4,7 @@ import { AnimStateMachine, orientationForEdge } from '../pixi/FrameAnimPlayer'
 
 describe('spriteRegistry', () => {
   it('has registered sprite characters with full clip sets', () => {
+    expect(spriteRegistry.get('apple_tart')).toBeDefined()
     expect(spriteRegistry.get('irish_coffee')).toBeDefined()
     expect(spriteRegistry.get('mangosticky_rice')).toBeDefined()
     expect(spriteRegistry.get('peanut')).toBeDefined()
@@ -87,9 +88,9 @@ describe('spriteRegistry', () => {
 })
 
 describe('getAllSpriteUrls', () => {
-  /** irish 8+4+8 + mango 9+4+8 + peanut 8+4+8 + pistachio 8+4+8 + sb_cc 8+8+8 + tangyuan 8+4+8 */
+  /** apple 10+5+9 + irish 8+4+8 + mango 9+4+8 + peanut 8+4+8 + pistachio 8+4+8 + sb_cc 8+8+8 + tangyuan 8+4+8 */
   const EXPECTED_TOTAL_SPRITE_URLS =
-    (8 + 4 + 8) + (9 + 4 + 8) + (8 + 4 + 8) + (8 + 4 + 8) + (8 + 8 + 8) + (8 + 4 + 8)
+    (10 + 5 + 9) + (8 + 4 + 8) + (9 + 4 + 8) + (8 + 4 + 8) + (8 + 4 + 8) + (8 + 8 + 8) + (8 + 4 + 8)
 
   it('returns all preload URLs for fall + walk + fall-wait clips', () => {
     expect(getAllSpriteUrls()).toHaveLength(EXPECTED_TOTAL_SPRITE_URLS)

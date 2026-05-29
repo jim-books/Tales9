@@ -1,7 +1,48 @@
 import type { DrinkProfile, AnimationFamily } from '../types'
 
-/** Static drink catalog for Barcode MVP. Replace content with real menu data. */
-export const drinkCatalog: DrinkProfile[] = [
+/**
+ * Top-level folders under public/sprites/. Menu and catalog only include
+ * drinks that map to one of these folders.
+ */
+export const PUBLIC_SPRITE_DRINK_FOLDERS = [
+  'apple-tart',
+  'irish-coffee',
+  'mangosticky-rice',
+  'peanut',
+  'pistachio',
+  'sb-cc',
+  'tangyuan',
+] as const
+
+/** drinkCatalog id → public/sprites folder name */
+export const DRINK_SPRITE_FOLDER: Record<string, (typeof PUBLIC_SPRITE_DRINK_FOLDERS)[number]> = {
+  'apple-tart': 'apple-tart',
+  'irish-coffee': 'irish-coffee',
+  'mango-sticky-rice': 'mangosticky-rice',
+  'peanut': 'peanut',
+  'pistachio': 'pistachio',
+  'salted-cc': 'sb-cc',
+  'tangyuan': 'tangyuan',
+}
+
+function hasPublicSpriteFolder(drink: DrinkProfile): boolean {
+  const folder = DRINK_SPRITE_FOLDER[drink.id]
+  return folder != null && (PUBLIC_SPRITE_DRINK_FOLDERS as readonly string[]).includes(folder)
+}
+
+const allDrinkProfiles: DrinkProfile[] = [
+  {
+    id: 'apple-tart',
+    name: 'APPLE TART',
+    category: 'DESSERT_INSPIRED',
+    price: 124,
+    flavorProfile: 'Sweet/Crisp',
+    ingredients: ['Apple Brandy', 'Vanilla', 'Cinnamon', 'Lemon', 'Pastry Cream'],
+    animationFamily: 'elegant',
+    colorPalette: ['#C62828', '#FFAB91', '#FFF3E0'],
+    spriteCharacter: 'apple_tart',
+    description: 'Crisp apple and warm spice with a pastry-cream finish — dessert-bar elegance in a glass.',
+  },
   {
     id: 'irish-coffee',
     name: 'IRISH COFFEE',
@@ -75,6 +116,9 @@ export const drinkCatalog: DrinkProfile[] = [
     description: 'Inspired by the classic glutinous rice dessert — warm, sweet, and softly aromatic.',
   },
 ]
+
+/** Drinks shown in the menu and available for orders — must have sprites in public/sprites/. */
+export const drinkCatalog: DrinkProfile[] = allDrinkProfiles.filter(hasPublicSpriteFolder)
 
 export const getDrinkById = (id: string): DrinkProfile | undefined =>
   drinkCatalog.find((d) => d.id === id)

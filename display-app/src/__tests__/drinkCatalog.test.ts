@@ -1,7 +1,30 @@
 import { describe, it, expect } from 'vitest'
-import { drinkCatalog, getDrinkById, recommendDrink } from '../data/drinkCatalog'
+import {
+  drinkCatalog,
+  getDrinkById,
+  recommendDrink,
+  DRINK_SPRITE_FOLDER,
+  PUBLIC_SPRITE_DRINK_FOLDERS,
+} from '../data/drinkCatalog'
 
 describe('drinkCatalog', () => {
+  it('only includes drinks with a public/sprites folder', () => {
+    for (const drink of drinkCatalog) {
+      const folder = DRINK_SPRITE_FOLDER[drink.id]
+      expect(folder, drink.id).toBeDefined()
+      expect(PUBLIC_SPRITE_DRINK_FOLDERS).toContain(folder)
+    }
+  })
+
+  it('includes every sprite folder as a menu drink', () => {
+    for (const folder of PUBLIC_SPRITE_DRINK_FOLDERS) {
+      expect(
+        drinkCatalog.some((d) => DRINK_SPRITE_FOLDER[d.id] === folder),
+        folder,
+      ).toBe(true)
+    }
+  })
+
   it('contains at least one drink per category', () => {
     const categories = new Set(drinkCatalog.map((d) => d.category))
     expect(categories.has('COFFEE_BASED')).toBe(true)
