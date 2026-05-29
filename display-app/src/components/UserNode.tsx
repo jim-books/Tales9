@@ -370,7 +370,9 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     e.stopPropagation()
   }, [])
 
-  const navigate = useCallback((s: PanelScreen) => setScreen(s), [])
+  const navigate = useCallback((s: PanelScreen) => {
+    setScreen(s)
+  }, [node.id])
 
   const renderScreen = (): React.ReactNode => {
     switch (screen.view) {

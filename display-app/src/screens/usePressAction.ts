@@ -12,14 +12,14 @@ export function usePressAction() {
     <T extends HTMLElement>(action: () => void): PressActionHandlers<T> => ({
       onPointerUp: (e: React.PointerEvent<T>) => {
         if (e.pointerType === 'mouse') return
-
         suppressClickUntilRef.current = Date.now() + 450
         action()
         e.preventDefault()
         e.stopPropagation()
       },
       onClick: () => {
-        if (Date.now() < suppressClickUntilRef.current) return
+        const suppressed = Date.now() < suppressClickUntilRef.current
+        if (suppressed) return
         action()
       },
     }),
