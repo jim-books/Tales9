@@ -97,6 +97,24 @@ describe('AnimationDispatcher', () => {
     }
   })
 
+  it('clearAssignment removes mapping for one coaster', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.clearAssignment('c1')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    expect(collected).toHaveLength(0)
+  })
+
+  it('reset clears all assignment mappings', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.assignDrink('c2', 'peanut')
+    dispatcher.reset()
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    dispatcher.onCoasterConfirmed('c2', { x: 10, y: 10 })
+    expect(collected).toHaveLength(0)
+  })
+
   it('only the unsubscribed callback stops receiving', () => {
     const a: AnimationCommand[] = []
     const b: AnimationCommand[] = []

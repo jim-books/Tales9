@@ -35,6 +35,7 @@ function MainView(): JSX.Element {
   const startGame = useAppStore((s) => s.startGame)
   const endGame = useAppStore((s) => s.endGame)
   const linkOrderToCoaster = useAppStore((s) => s.linkOrderToCoaster)
+  const unlinkOrdersFromCoaster = useAppStore((s) => s.unlinkOrdersFromCoaster)
   const arriveOrderByCoaster = useAppStore((s) => s.arriveOrderByCoaster)
 
   const [showDebugPanel, setShowDebugPanel] = useState(false)
@@ -91,12 +92,13 @@ function MainView(): JSX.Element {
 
       for (const event of frame.events) {
         if (event.type === 'confirmed') {
-          const existingDrinkId = useAppStore
-            .getState()
-            .coasters.find((c) => c.id === event.coasterId)?.drinkId
+          const storeState = useAppStore.getState()
+          const existingDrinkId = storeState.coasters.find((c) => c.id === event.coasterId)?.drinkId ?? null
+          const pendingDrinkId = storeState.coasterDrinkAssignments[event.coasterId] ?? null
+          const linkedDrinkId = storeState.orders.find((o) => o.coasterId === event.coasterId)?.drinkId ?? null
           const resolvedDrinkId = mappingMode === 'hardcoded'
             ? hardcodedDrinkIdForCoaster(event.coasterId)
-            : existingDrinkId ?? null
+            : (existingDrinkId ?? pendingDrinkId ?? linkedDrinkId ?? null)
 
           if (resolvedDrinkId) {
             assignDrinkToCoaster(event.coasterId, resolvedDrinkId)
@@ -174,7 +176,12 @@ function MainView(): JSX.Element {
   const handleToggleCoaster = (idx: number) => {
     const coasterNumber = idx + 1
     const id = `coaster-${coasterNumber}`
-    const drinkId = hardcodedDrinkIdForCoaster(id)
+    const mappedDrinkId = useAppStore.getState().coasters.find((c) => c.id === id)?.drinkId ?? null
+    const linkedOrderDrinkId = useAppStore.getState().orders.find((o) => o.coasterId === id)?.drinkId ?? null
+    const pendingDrinkId = useAppStore.getState().coasterDrinkAssignments[id] ?? null
+    const drinkId = mappingMode === 'hardcoded'
+      ? hardcodedDrinkIdForCoaster(id)
+      : (mappedDrinkId ?? linkedOrderDrinkId ?? pendingDrinkId)
     const centroid = DEMO_CENTROIDS[idx]
     if (!centroid) return
     if (activeCoasterIdsRef.current.has(id)) {
@@ -240,20 +247,37 @@ function MainView(): JSX.Element {
   // Firestore listeners: session control + coaster assignments pushed from iOS
   useEffect(() => {
     const unsubSession = listenToSession(({ active, userCount }) => {
-      if (active) startSession(userCount)
-      else endSession()
+      dispatcherRef.current?.reset()
+      if (active) {
+        startSession(userCount)
+      } else {
+        endSession()
+      }
     })
-    const unsubAssign = listenToCoasterAssignments(({ coasterId, drinkId }) => {
+    const unsubAssign = listenToCoasterAssignments((snap) => {
       if (mappingMode !== 'firebase') return
-      assignDrinkToCoaster(coasterId, drinkId)
-      dispatcherRef.current?.assignDrink(coasterId, drinkId)
-      linkOrderToCoaster(drinkId, coasterId)
+      if (snap.type === 'assigned') {
+        assignDrinkToCoaster(snap.coasterId, snap.drinkId)
+        dispatcherRef.current?.assignDrink(snap.coasterId, snap.drinkId)
+        linkOrderToCoaster(snap.orderId, snap.coasterId)
+      } else {
+        assignDrinkToCoaster(snap.coasterId, null)
+        dispatcherRef.current?.clearAssignment(snap.coasterId)
+        unlinkOrdersFromCoaster(snap.coasterId)
+      }
     })
     return () => {
       unsubSession()
       unsubAssign()
     }
-  }, [startSession, endSession, assignDrinkToCoaster, linkOrderToCoaster, mappingMode])
+  }, [
+    startSession,
+    endSession,
+    assignDrinkToCoaster,
+    linkOrderToCoaster,
+    unlinkOrdersFromCoaster,
+    mappingMode,
+  ])
 
   return (
     <div

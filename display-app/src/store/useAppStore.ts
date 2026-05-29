@@ -41,6 +41,8 @@ interface AppState {
 
   // ─── Coasters ────────────────────────────────────────────────────────────
   coasters: Coaster[]
+  /** Firebase/iOS assignments keyed by coasterId, applied when coaster appears */
+  coasterDrinkAssignments: Record<string, string>
 
   // ─── Orders ──────────────────────────────────────────────────────────────
   orders: Order[]
@@ -68,11 +70,12 @@ interface AppState {
     },
   ) => void
   removeCoaster: (coasterId: string) => void
-  assignDrinkToCoaster: (coasterId: string, drinkId: string) => void
+  assignDrinkToCoaster: (coasterId: string, drinkId: string | null) => void
 
   addOrder: (order: Order) => void
   updateOrderStatus: (orderId: string, status: OrderStatus) => void
-  linkOrderToCoaster: (drinkId: string, coasterId: string) => void
+  linkOrderToCoaster: (orderId: string, coasterId: string) => void
+  unlinkOrdersFromCoaster: (coasterId: string) => void
   arriveOrderByCoaster: (coasterId: string) => void
 
   setGameState: (game: GameState | null) => void
@@ -89,6 +92,7 @@ export const useAppStore = create<AppState>((set) => ({
   userCount: 0,
   userNodes: [],
   coasters: [],
+  coasterDrinkAssignments: {},
   orders: [],
   gameState: null,
   orderBurst: null,
@@ -108,6 +112,8 @@ export const useAppStore = create<AppState>((set) => ({
         panelOpen: false,
       })),
       orders: [],
+      coasters: [],
+      coasterDrinkAssignments: {},
       gameState: null,
     }),
 
@@ -117,6 +123,7 @@ export const useAppStore = create<AppState>((set) => ({
       userCount: 0,
       userNodes: [],
       coasters: [],
+      coasterDrinkAssignments: {},
       orders: [],
       gameState: null,
     }),
@@ -156,9 +163,11 @@ export const useAppStore = create<AppState>((set) => ({
     set((s) => {
       const existing = s.coasters.find((c) => c.id === coaster.id)
       const detectionState = coaster.detectionState ?? existing?.detectionState ?? 'confirmed'
+      const pendingDrink = s.coasterDrinkAssignments[coaster.id] ?? null
+      const resolvedDrinkId = coaster.drinkId ?? existing?.drinkId ?? pendingDrink ?? null
       const updated: Coaster = {
-        drinkId: existing?.drinkId ?? null,
         ...coaster,
+        drinkId: resolvedDrinkId,
         detectionState,
         detected: detectionState === 'confirmed',
       }
@@ -175,11 +184,23 @@ export const useAppStore = create<AppState>((set) => ({
     })),
 
   assignDrinkToCoaster: (coasterId, drinkId) =>
-    set((s) => ({
-      coasters: s.coasters.map((c) =>
-        c.id === coasterId ? { ...c, drinkId } : c,
-      ),
-    })),
+    set((s) => {
+      const existing = s.coasters.find((c) => c.id === coasterId)
+      const nextAssignments = { ...s.coasterDrinkAssignments }
+      if (drinkId) {
+        nextAssignments[coasterId] = drinkId
+      } else {
+        delete nextAssignments[coasterId]
+      }
+      return {
+        coasterDrinkAssignments: nextAssignments,
+        coasters: existing
+          ? s.coasters.map((c) =>
+              c.id === coasterId ? { ...c, drinkId } : c,
+            )
+          : s.coasters,
+      }
+    }),
 
   addOrder: (order) => {
     set((s) => ({ orders: [...s.orders, order] }))
@@ -191,21 +212,25 @@ export const useAppStore = create<AppState>((set) => ({
       orders: s.orders.map((o) => (o.id === orderId ? { ...o, status } : o)),
     })),
 
-  linkOrderToCoaster: (drinkId, coasterId) =>
+  linkOrderToCoaster: (orderId, coasterId) =>
     set((s) => {
       // Idempotent guard: WS + Firestore may emit the same assignment.
-      if (s.orders.some((o) => o.coasterId === coasterId)) return s
-      let linked = false
       return {
         orders: s.orders.map((o) => {
-          if (!linked && o.drinkId === drinkId && o.coasterId === null) {
-            linked = true
+          if (o.id === orderId) {
             return { ...o, coasterId }
           }
           return o
         }),
       }
     }),
+
+  unlinkOrdersFromCoaster: (coasterId) =>
+    set((s) => ({
+      orders: s.orders.map((o) =>
+        o.coasterId === coasterId ? { ...o, coasterId: null } : o,
+      ),
+    })),
 
   arriveOrderByCoaster: (coasterId) =>
     set((s) => ({

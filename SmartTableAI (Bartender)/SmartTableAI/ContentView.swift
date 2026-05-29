@@ -890,7 +890,7 @@ private struct DemoSyncView: View {
                         .font(.headline)
                     Spacer()
                     if !client.ordersReceived.isEmpty {
-                        Button("Clear") { client.clearOrders() }
+                        Button("Clear") { client.clearOrdersAndAssignments() }
                             .font(.footnote)
                     }
                 }
@@ -906,6 +906,11 @@ private struct DemoSyncView: View {
                                     Text(order.drinkName)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
+                                    if !order.userId.isEmpty {
+                                        Text(order.displayUserLabel)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                     Text(order.timestamp, style: .time)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -916,16 +921,27 @@ private struct DemoSyncView: View {
                             }
                             // Coaster assignment picker — sends COASTER_ASSIGN to Firestore
                             Picker("Assign to coaster", selection: Binding(
-                                get: { client.assignedCoasters[order.drinkId] },
+                                get: { client.assignedCoasters[order.id] },
                                 set: { newCode in
-                                    guard let code = newCode else { return }
-                                    client.sendCoasterAssignment(coasterId: code, drinkId: order.drinkId)
-                                    client.assignedCoasters[order.drinkId] = code
+                                    if let code = newCode {
+                                        client.sendCoasterAssignment(
+                                            coasterId: code,
+                                            orderId: order.id,
+                                            drinkId: order.drinkId
+                                        )
+                                        client.assignedCoasters[order.id] = code
+                                    } else if let current = client.assignedCoasters[order.id] {
+                                        client.clearCoasterAssignment(coasterId: current, forOrderId: order.id)
+                                    }
                                 }
                             )) {
                                 Text("— assign coaster —").tag(String?.none)
                                 Text("Coaster 1 (large triangle)").tag(String?.some("coaster-1"))
                                 Text("Coaster 2 (small triangle)").tag(String?.some("coaster-2"))
+                                Text("Coaster 3").tag(String?.some("coaster-3"))
+                                Text("Coaster 4").tag(String?.some("coaster-4"))
+                                Text("Coaster 5").tag(String?.some("coaster-5"))
+                                Text("Coaster 6").tag(String?.some("coaster-6"))
                             }
                             .pickerStyle(.menu)
                         }

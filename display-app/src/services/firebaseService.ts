@@ -3,6 +3,7 @@ import {
   getFirestore,
   doc,
   setDoc,
+  deleteDoc,
   collection,
   onSnapshot,
 } from 'firebase/firestore'
@@ -54,10 +55,40 @@ export async function writeOrderToFirestore(order: Order): Promise<void> {
   }
 }
 
+export async function writeCoasterAssignmentToFirestore(
+  coasterId: string,
+  orderId: string,
+  drinkId: string,
+): Promise<void> {
+  const db = getDb()
+  if (!db) return
+  try {
+    await setDoc(doc(db, 'venues', 'demo', 'coasterAssignments', coasterId), {
+      orderId,
+      drinkId,
+      updatedAt: Date.now(),
+    })
+  } catch (e) {
+    console.warn('[Firebase] writeCoasterAssignment failed:', e)
+  }
+}
+
+export async function deleteCoasterAssignmentFromFirestore(coasterId: string): Promise<void> {
+  const db = getDb()
+  if (!db) return
+  try {
+    await deleteDoc(doc(db, 'venues', 'demo', 'coasterAssignments', coasterId))
+  } catch (e) {
+    console.warn('[Firebase] deleteCoasterAssignment failed:', e)
+  }
+}
+
 // ── Listeners ─────────────────────────────────────────────────────────────────
 
 export type SessionSnapshot = { active: boolean; userCount: number }
-export type AssignmentSnapshot = { coasterId: string; drinkId: string }
+export type AssignmentSnapshot =
+  | { type: 'assigned'; coasterId: string; orderId: string; drinkId: string }
+  | { type: 'cleared'; coasterId: string }
 
 /**
  * Listens to venues/demo/session/current for session state changes pushed by iOS.
@@ -76,12 +107,12 @@ export function listenToSession(
 }
 
 /**
- * Listens to venues/demo/coasterAssignments for drink assignments pushed by iOS.
- * Fires once per added/modified document (one per coaster).
+ * Listens to venues/demo/coasterAssignments for order->coaster assignments from iOS.
+ * Emits assigned for add/modify, and cleared for delete.
  * Returns an unsubscribe function.
  */
 export function listenToCoasterAssignments(
-  onAssign: (snap: AssignmentSnapshot) => void,
+  onChange: (snap: AssignmentSnapshot) => void,
 ): () => void {
   const db = getDb()
   if (!db) return () => {}
@@ -91,8 +122,13 @@ export function listenToCoasterAssignments(
       snap.docChanges().forEach((change) => {
         if (change.type === 'added' || change.type === 'modified') {
           const d = change.doc.data()
+          const orderId = d.orderId as string | undefined
           const drinkId = d.drinkId as string | undefined
-          if (drinkId) onAssign({ coasterId: change.doc.id, drinkId })
+          if (orderId && drinkId) {
+            onChange({ type: 'assigned', coasterId: change.doc.id, orderId, drinkId })
+          }
+        } else if (change.type === 'removed') {
+          onChange({ type: 'cleared', coasterId: change.doc.id })
         }
       })
     },

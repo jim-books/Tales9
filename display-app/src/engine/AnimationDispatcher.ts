@@ -34,6 +34,16 @@ export class AnimationDispatcher {
     this.assignments.set(coasterId, drinkId)
   }
 
+  /** Clears one coaster assignment (e.g. Firestore assignment doc removed). */
+  clearAssignment(coasterId: string): void {
+    this.assignments.delete(coasterId)
+  }
+
+  /** Clears all assignment mappings (e.g. session restart/end). */
+  reset(): void {
+    this.assignments.clear()
+  }
+
   /** Called by TrackingEngine once a coaster is identity-confirmed */
   onCoasterConfirmed(coasterId: string, position: { x: number; y: number }): void {
     const drinkId = this.assignments.get(coasterId)

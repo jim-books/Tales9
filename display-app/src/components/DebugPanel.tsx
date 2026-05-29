@@ -1,8 +1,12 @@
 import { useAppStore } from '../store/useAppStore'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
-import type { GameType } from '../types'
+import type { GameType, Order } from '../types'
 import type { FrameDiagnosis } from '../engine/TrackingEngine'
 import type { MappingMode } from '../data/coasterDrinkMapping'
+import {
+  writeCoasterAssignmentToFirestore,
+  deleteCoasterAssignmentFromFirestore,
+} from '../services/firebaseService'
 
 const px = (n: number): string => Math.round(n).toString()
 const norm = (n: number): string => n.toFixed(3)
@@ -11,6 +15,12 @@ const stateGlyph = (state: 'preview' | 'confirmed' | 'lost'): string => {
   if (state === 'confirmed') return '◉'
   if (state === 'preview') return '◌'
   return '◍'
+}
+
+function displayUserLabel(userId: string): string {
+  const match = userId.match(/^user-(\d+)$/)
+  if (!match) return userId
+  return `User ${Number.parseInt(match[1], 10) + 1}`
 }
 
 export interface DebugPanelProps {
@@ -66,6 +76,27 @@ export function DebugPanel({
   const coasters = useAppStore((s) => s.coasters)
   const gameState = useAppStore((s) => s.gameState)
   const orders = useAppStore((s) => s.orders)
+  const assignDrinkToCoaster = useAppStore((s) => s.assignDrinkToCoaster)
+  const linkOrderToCoaster = useAppStore((s) => s.linkOrderToCoaster)
+  const unlinkOrdersFromCoaster = useAppStore((s) => s.unlinkOrdersFromCoaster)
+
+  const handleAssignOrderToCoaster = async (order: Order, coasterId: string): Promise<void> => {
+    if (order.coasterId && order.coasterId !== coasterId) {
+      await deleteCoasterAssignmentFromFirestore(order.coasterId)
+      assignDrinkToCoaster(order.coasterId, null)
+      unlinkOrdersFromCoaster(order.coasterId)
+    }
+    await writeCoasterAssignmentToFirestore(coasterId, order.id, order.drinkId)
+    assignDrinkToCoaster(coasterId, order.drinkId)
+    linkOrderToCoaster(order.id, coasterId)
+  }
+
+  const handleClearOrderAssignment = async (order: Order): Promise<void> => {
+    if (!order.coasterId) return
+    await deleteCoasterAssignmentFromFirestore(order.coasterId)
+    assignDrinkToCoaster(order.coasterId, null)
+    unlinkOrdersFromCoaster(order.coasterId)
+  }
 
   const buttonStyle = (active: boolean) => ({
     padding: '6px 12px',
@@ -215,6 +246,67 @@ export function DebugPanel({
           })}
         </div>
       </div>
+
+      {mappingMode === 'firebase' && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 4 }}>{'── Firebase Orders & Assignments ──'}</div>
+          {orders.length === 0 ? (
+            <div style={{ fontSize: 11, opacity: 0.85 }}>
+              {'  Place an order on the table to send it to Firestore.\n'}
+            </div>
+          ) : (
+            orders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  marginBottom: 8,
+                  padding: '6px 8px',
+                  border: '1px solid #00ff8844',
+                  borderRadius: 4,
+                  fontSize: 11,
+                }}
+              >
+                <div style={{ marginBottom: 4 }}>
+                  {`${displayUserLabel(order.userId)} · ${order.drinkId} · ${order.status}`}
+                </div>
+                <div style={{ marginBottom: 4, opacity: 0.85 }}>
+                  {`  order=${order.id.length > 28 ? `${order.id.slice(0, 28)}…` : order.id}  coaster=${order.coasterId ?? '—'}`}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {Array.from({ length: 6 }, (_, idx) => {
+                    const coasterId = `coaster-${idx + 1}`
+                    const isSelected = order.coasterId === coasterId
+                    return (
+                      <button
+                        key={coasterId}
+                        type="button"
+                        onClick={() => void handleAssignOrderToCoaster(order, coasterId)}
+                        style={buttonStyle(isSelected)}
+                      >
+                        {`C${idx + 1}`}
+                      </button>
+                    )
+                  })}
+                  {order.coasterId ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleClearOrderAssignment(order)}
+                      style={{
+                        ...actionButtonStyle,
+                        padding: '4px 8px',
+                        fontSize: 10,
+                        marginLeft: 4,
+                      }}
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Game Controls */}
       <div style={{ marginBottom: 12 }}>
@@ -401,7 +493,8 @@ export function DebugPanel({
         ) : (
           orders.map((o) => (
             <div key={o.id}>
-              {`  [${o.id}] user=${o.userId}  drink=${o.drinkId}  status=${o.status}\n`}
+              {`  [${o.id}] ${displayUserLabel(o.userId)}  drink=${o.drinkId}  ` +
+                `coaster=${o.coasterId ?? '—'}  status=${o.status}\n`}
             </div>
           ))
         )}
