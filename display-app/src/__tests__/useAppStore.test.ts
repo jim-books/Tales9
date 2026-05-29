@@ -94,11 +94,11 @@ describe('useAppStore', () => {
   it('updateOrderStatus changes only the targeted order', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-1', userId: 'user-0', drinkId: 'pisco-colada',
+      id: 'ord-1', userId: 'user-0', drinkId: 'irish-coffee',
       status: 'pending', coasterId: null, createdAt: 0,
     })
     useAppStore.getState().addOrder({
-      id: 'ord-2', userId: 'user-0', drinkId: 'momo-sour',
+      id: 'ord-2', userId: 'user-0', drinkId: 'pistachio',
       status: 'pending', coasterId: null, createdAt: 0,
     })
     useAppStore.getState().updateOrderStatus('ord-1', 'preparing')
@@ -115,9 +115,9 @@ describe('useAppStore', () => {
       centroid: { x: 0.5, y: 0.33 },
       detectionState: 'confirmed',
     })
-    useAppStore.getState().assignDrinkToCoaster('coaster-1', 'pisco-colada')
+    useAppStore.getState().assignDrinkToCoaster('coaster-1', 'irish-coffee')
     const coaster = useAppStore.getState().coasters.find((c) => c.id === 'coaster-1')
-    expect(coaster?.drinkId).toBe('pisco-colada')
+    expect(coaster?.drinkId).toBe('irish-coffee')
   })
 
   it('keeps preview coaster as not fully detected', () => {
@@ -167,10 +167,10 @@ describe('useAppStore', () => {
   it('linkOrderToCoaster sets coasterId on first unlinked order for the drink', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-a', userId: 'user-0', drinkId: 'pisco-colada',
+      id: 'ord-a', userId: 'user-0', drinkId: 'irish-coffee',
       status: 'pending', coasterId: null, createdAt: 0,
     })
-    useAppStore.getState().linkOrderToCoaster('pisco-colada', 'coaster-1')
+    useAppStore.getState().linkOrderToCoaster('irish-coffee', 'coaster-1')
     const order = useAppStore.getState().orders.find((o) => o.id === 'ord-a')
     expect(order?.coasterId).toBe('coaster-1')
   })
@@ -178,10 +178,10 @@ describe('useAppStore', () => {
   it('linkOrderToCoaster does not affect orders for a different drink', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-b', userId: 'user-0', drinkId: 'momo-sour',
+      id: 'ord-b', userId: 'user-0', drinkId: 'pistachio',
       status: 'pending', coasterId: null, createdAt: 0,
     })
-    useAppStore.getState().linkOrderToCoaster('pisco-colada', 'coaster-1')
+    useAppStore.getState().linkOrderToCoaster('irish-coffee', 'coaster-1')
     const order = useAppStore.getState().orders.find((o) => o.id === 'ord-b')
     expect(order?.coasterId).toBeNull()
   })
@@ -189,14 +189,14 @@ describe('useAppStore', () => {
   it('linkOrderToCoaster only links the first unlinked order when multiple exist', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-c1', userId: 'user-0', drinkId: 'espresso-martini',
+      id: 'ord-c1', userId: 'user-0', drinkId: 'peanut',
       status: 'pending', coasterId: null, createdAt: 0,
     })
     useAppStore.getState().addOrder({
-      id: 'ord-c2', userId: 'user-0', drinkId: 'espresso-martini',
+      id: 'ord-c2', userId: 'user-0', drinkId: 'peanut',
       status: 'pending', coasterId: null, createdAt: 1,
     })
-    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-2')
+    useAppStore.getState().linkOrderToCoaster('peanut', 'coaster-2')
     const orders = useAppStore.getState().orders
     expect(orders.find((o) => o.id === 'ord-c1')?.coasterId).toBe('coaster-2')
     expect(orders.find((o) => o.id === 'ord-c2')?.coasterId).toBeNull()
@@ -205,15 +205,15 @@ describe('useAppStore', () => {
   it('linkOrderToCoaster is idempotent for duplicate coaster assignments', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-i1', userId: 'user-0', drinkId: 'espresso-martini',
+      id: 'ord-i1', userId: 'user-0', drinkId: 'peanut',
       status: 'pending', coasterId: null, createdAt: 0,
     })
     useAppStore.getState().addOrder({
-      id: 'ord-i2', userId: 'user-0', drinkId: 'espresso-martini',
+      id: 'ord-i2', userId: 'user-0', drinkId: 'peanut',
       status: 'pending', coasterId: null, createdAt: 1,
     })
-    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-1')
-    useAppStore.getState().linkOrderToCoaster('espresso-martini', 'coaster-1')
+    useAppStore.getState().linkOrderToCoaster('peanut', 'coaster-1')
+    useAppStore.getState().linkOrderToCoaster('peanut', 'coaster-1')
     const orders = useAppStore.getState().orders
     expect(orders.find((o) => o.id === 'ord-i1')?.coasterId).toBe('coaster-1')
     expect(orders.find((o) => o.id === 'ord-i2')?.coasterId).toBeNull()
@@ -224,7 +224,7 @@ describe('useAppStore', () => {
   it('arriveOrderByCoaster sets status to arrived for the linked order', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-d', userId: 'user-0', drinkId: 'apple-tart',
+      id: 'ord-d', userId: 'user-0', drinkId: 'tangyuan',
       status: 'preparing', coasterId: 'coaster-1', createdAt: 0,
     })
     useAppStore.getState().arriveOrderByCoaster('coaster-1')
@@ -235,7 +235,7 @@ describe('useAppStore', () => {
   it('arriveOrderByCoaster does not downgrade an already-arrived order', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-e', userId: 'user-0', drinkId: 'momo-sour',
+      id: 'ord-e', userId: 'user-0', drinkId: 'pistachio',
       status: 'arrived', coasterId: 'coaster-2', createdAt: 0,
     })
     useAppStore.getState().arriveOrderByCoaster('coaster-2')
@@ -246,7 +246,7 @@ describe('useAppStore', () => {
   it('arriveOrderByCoaster is a no-op when no order is linked to that coaster', () => {
     useAppStore.getState().startSession(1)
     useAppStore.getState().addOrder({
-      id: 'ord-f', userId: 'user-0', drinkId: 'pisco-colada',
+      id: 'ord-f', userId: 'user-0', drinkId: 'irish-coffee',
       status: 'pending', coasterId: null, createdAt: 0,
     })
     useAppStore.getState().arriveOrderByCoaster('coaster-1')

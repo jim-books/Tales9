@@ -4,58 +4,60 @@ import { AnimStateMachine, orientationForEdge } from '../pixi/FrameAnimPlayer'
 
 describe('spriteRegistry', () => {
   it('has registered sprite characters with full clip sets', () => {
-    expect(spriteRegistry.get('apple')).toBeDefined()
+    expect(spriteRegistry.get('irish_coffee')).toBeDefined()
     expect(spriteRegistry.get('mangosticky_rice')).toBeDefined()
+    expect(spriteRegistry.get('peanut')).toBeDefined()
+    expect(spriteRegistry.get('pistachio')).toBeDefined()
     expect(spriteRegistry.get('sb_cc')).toBeDefined()
+    expect(spriteRegistry.get('tangyuan')).toBeDefined()
   })
 
   it('returns undefined for unregistered characters', () => {
     expect(spriteRegistry.get('pineapple')).toBeUndefined()
-    expect(spriteRegistry.get('peach')).toBeUndefined()
-    expect(spriteRegistry.get('coffee_bean')).toBeUndefined()
+    expect(spriteRegistry.get('apple')).toBeUndefined()
   })
 
-  it('apple fall frameset has 10 frames', () => {
-    const def = spriteRegistry.get('apple')!
-    expect(def.fall.frames).toHaveLength(10)
+  it('irish_coffee fall frameset has 8 frames', () => {
+    const def = spriteRegistry.get('irish_coffee')!
+    expect(def.fall.frames).toHaveLength(8)
   })
 
-  it('apple walk frameset has 5 frames', () => {
-    const def = spriteRegistry.get('apple')!
-    expect(def.walk.frames).toHaveLength(5)
+  it('irish_coffee walk frameset has 4 frames', () => {
+    const def = spriteRegistry.get('irish_coffee')!
+    expect(def.walk.frames).toHaveLength(4)
   })
 
-  it('apple wave frameset has 9 frames (FALL_WAIT clip)', () => {
-    const def = spriteRegistry.get('apple')!
-    expect(getFallWaitClip(def)?.frames).toHaveLength(9)
+  it('irish_coffee wave frameset has 8 frames (FALL_WAIT clip)', () => {
+    const def = spriteRegistry.get('irish_coffee')!
+    expect(getFallWaitClip(def)?.frames).toHaveLength(8)
   })
 
-  it('apple fall frames follow the /sprites/ path convention', () => {
-    const def = spriteRegistry.get('apple')!
+  it('irish_coffee fall frames follow the /sprites/ path convention', () => {
+    const def = spriteRegistry.get('irish_coffee')!
     for (const url of def.fall.frames) {
-      expect(url).toMatch(/^\/sprites\/apple-tart\/fall\/Apple8bitFallSep\d+\.png$/)
+      expect(url).toMatch(/^\/sprites\/irish-coffee\/fall\/IrishCoffee8bitFall\d+\.png$/)
     }
   })
 
-  it('apple walk frames follow the /sprites/ path convention', () => {
-    const def = spriteRegistry.get('apple')!
+  it('irish_coffee walk frames follow the /sprites/ path convention', () => {
+    const def = spriteRegistry.get('irish_coffee')!
     for (const url of def.walk.frames) {
-      expect(url).toMatch(/^\/sprites\/apple-tart\/walk\/Apple8bitWalkSep\d+\.png$/)
+      expect(url).toMatch(/^\/sprites\/irish-coffee\/walk\/IrishCoffee8bitWalk\d+\.png$/)
     }
   })
 
-  it('apple fall loops is 2', () => {
-    const def = spriteRegistry.get('apple')!
+  it('irish_coffee fall loops is 2', () => {
+    const def = spriteRegistry.get('irish_coffee')!
     expect(def.fall.loops).toBe(2)
   })
 
-  it('apple walk loops is -1 (infinite)', () => {
-    const def = spriteRegistry.get('apple')!
+  it('irish_coffee walk loops is -1 (infinite)', () => {
+    const def = spriteRegistry.get('irish_coffee')!
     expect(def.walk.loops).toBe(-1)
   })
 
-  it('apple has a positive scale', () => {
-    const def = spriteRegistry.get('apple')!
+  it('irish_coffee has a positive scale', () => {
+    const def = spriteRegistry.get('irish_coffee')!
     expect(def.scale).toBeGreaterThan(0)
   })
 
@@ -72,12 +74,22 @@ describe('spriteRegistry', () => {
     expect(def.walk.frames).toHaveLength(8)
     expect(getFallWaitClip(def)?.frames).toHaveLength(8)
   })
+
+  it('peanut uses yawn frames as idle clip', () => {
+    const def = spriteRegistry.get('peanut')!
+    expect(def.idle?.frames[0]).toMatch(/Peanut8bitYawn1\.png$/)
+  })
+
+  it('tangyuan uses jump frames as idle clip', () => {
+    const def = spriteRegistry.get('tangyuan')!
+    expect(def.idle?.frames[0]).toMatch(/Tangyuan8bitJump1\.png$/)
+  })
 })
 
 describe('getAllSpriteUrls', () => {
-  /** apple 10+5+9 + mangosticky 9+4+8 + sb_cc 8+8+8 */
+  /** irish 8+4+8 + mango 9+4+8 + peanut 8+4+8 + pistachio 8+4+8 + sb_cc 8+8+8 + tangyuan 8+4+8 */
   const EXPECTED_TOTAL_SPRITE_URLS =
-    (10 + 5 + 9) + (9 + 4 + 8) + (8 + 8 + 8)
+    (8 + 4 + 8) + (9 + 4 + 8) + (8 + 4 + 8) + (8 + 4 + 8) + (8 + 8 + 8) + (8 + 4 + 8)
 
   it('returns all preload URLs for fall + walk + fall-wait clips', () => {
     expect(getAllSpriteUrls()).toHaveLength(EXPECTED_TOTAL_SPRITE_URLS)
@@ -94,24 +106,24 @@ describe('getAllSpriteUrls', () => {
     }
   })
 
-  it('includes apple-tart wave paths for preload', () => {
+  it('includes irish-coffee wave paths for preload', () => {
     const urls = getAllSpriteUrls()
-    for (let i = 1; i <= 9; i++) {
-      expect(urls).toContain(`/sprites/apple-tart/wave/Apple8bitWave${i}.png`)
+    for (let i = 1; i <= 8; i++) {
+      expect(urls).toContain(`/sprites/irish-coffee/wave/IrishCoffee8bitWave${i}.png`)
     }
   })
 
-  it('includes all 10 apple fall frame paths', () => {
+  it('includes all 8 irish-coffee fall frame paths', () => {
     const urls = getAllSpriteUrls()
-    for (let i = 1; i <= 10; i++) {
-      expect(urls).toContain(`/sprites/apple-tart/fall/Apple8bitFallSep${i}.png`)
+    for (let i = 1; i <= 8; i++) {
+      expect(urls).toContain(`/sprites/irish-coffee/fall/IrishCoffee8bitFall${i}.png`)
     }
   })
 
-  it('includes all 5 apple walk frame paths', () => {
+  it('includes all 4 irish-coffee walk frame paths', () => {
     const urls = getAllSpriteUrls()
-    for (let i = 1; i <= 5; i++) {
-      expect(urls).toContain(`/sprites/apple-tart/walk/Apple8bitWalkSep${i}.png`)
+    for (let i = 1; i <= 4; i++) {
+      expect(urls).toContain(`/sprites/irish-coffee/walk/IrishCoffee8bitWalk${i}.png`)
     }
   })
 })

@@ -1,15 +1,14 @@
+const PLACEHOLDER_REEL = new URL('../../../Cocktail Menu Animation/StrawberryCheesecake.mp4', import.meta.url).href
+
 const DRINK_MENU_MEDIA: Record<string, string> = {
-  'apple-tart': new URL('../../../Cocktail Menu Animation/AppleTart.mp4', import.meta.url).href,
-  'espresso-martini': new URL('../../../Cocktail Menu Animation/BarcodeChocoMartini.mp4', import.meta.url).href,
-  'momo-sour': new URL('../../../Cocktail Menu Animation/MomoSour.mp4', import.meta.url).href,
-  // Asset filename uses legacy "Piso" spelling; keep explicit mapping to avoid silent mismatch.
-  'pisco-colada': new URL('../../../Cocktail Menu Animation/PisoColada.mp4', import.meta.url).href,
+  'irish-coffee': PLACEHOLDER_REEL,
   'mango-sticky-rice': new URL('../../../Cocktail Menu Animation/MangoStickyRice.mp4', import.meta.url).href,
-  // Placeholder reel until a dedicated menu clip exists; swap path when asset lands.
-  'salted-cc': new URL('../../../Cocktail Menu Animation/StrawberryCheesecake.mp4', import.meta.url).href,
+  'peanut': PLACEHOLDER_REEL,
+  'pistachio': PLACEHOLDER_REEL,
+  'salted-cc': PLACEHOLDER_REEL,
+  'tangyuan': PLACEHOLDER_REEL,
 }
 
 export function getDrinkMenuMedia(drinkId: string): string | null {
   return DRINK_MENU_MEDIA[drinkId] ?? null
 }
-

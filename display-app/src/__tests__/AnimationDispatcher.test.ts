@@ -13,7 +13,7 @@ describe('AnimationDispatcher', () => {
 
   it('subscribe receives commands emitted after subscription', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.assignDrink('c1', 'pisco-colada')
+    dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterRemoved('c1')
     expect(collected).toHaveLength(2)
     expect(collected[0].action).toBe('STOP')
@@ -23,7 +23,7 @@ describe('AnimationDispatcher', () => {
   it('unsubscribe stops receiving commands', () => {
     const unsub = dispatcher.subscribe((cmd) => collected.push(cmd))
     unsub()
-    dispatcher.assignDrink('c1', 'pisco-colada')
+    dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterConfirmed('c1', { x: 100, y: 200 })
     expect(collected).toHaveLength(0)
   })
@@ -43,7 +43,7 @@ describe('AnimationDispatcher', () => {
 
   it('onCoasterConfirmed with valid drinkId emits PLAY then SPAWN_SPRITE', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.assignDrink('c1', 'pisco-colada')
+    dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterConfirmed('c1', { x: 100, y: 200 })
 
     expect(collected).toHaveLength(2)
@@ -52,15 +52,15 @@ describe('AnimationDispatcher', () => {
     expect(play.action).toBe('PLAY')
     if (play.action === 'PLAY') {
       expect(play.coasterId).toBe('c1')
-      expect(play.profile.id).toBe('pisco-colada')
-      expect(play.profile.spriteCharacter).toBe('pineapple')
+      expect(play.profile.id).toBe('irish-coffee')
+      expect(play.profile.spriteCharacter).toBe('irish_coffee')
     }
 
     const spawn = collected[1]
     expect(spawn.action).toBe('SPAWN_SPRITE')
     if (spawn.action === 'SPAWN_SPRITE') {
       expect(spawn.coasterId).toBe('c1')
-      expect(spawn.character).toBe('pineapple')
+      expect(spawn.character).toBe('irish_coffee')
       expect(spawn.position).toEqual({ x: 100, y: 200 })
     }
   })
@@ -86,14 +86,14 @@ describe('AnimationDispatcher', () => {
 
   it('reassigning a drink changes future dispatches', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.assignDrink('c1', 'pisco-colada')
-    dispatcher.assignDrink('c1', 'espresso-martini')
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.assignDrink('c1', 'peanut')
     dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
 
     expect(collected).toHaveLength(2)
     const play = collected[0]
     if (play.action === 'PLAY') {
-      expect(play.profile.id).toBe('espresso-martini')
+      expect(play.profile.id).toBe('peanut')
     }
   })
 
@@ -110,7 +110,7 @@ describe('AnimationDispatcher', () => {
 
   it('onCoasterDetected remains a compatibility alias of onCoasterConfirmed', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.assignDrink('c1', 'pisco-colada')
+    dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterDetected('c1', { x: 10, y: 20 })
     expect(collected).toHaveLength(2)
     expect(collected[0].action).toBe('PLAY')

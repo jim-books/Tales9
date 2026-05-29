@@ -1,12 +1,12 @@
 export type MappingMode = 'hardcoded' | 'firebase'
 
 const HARDCODED_DRINK_IDS = [
-  'pisco-colada',
-  'espresso-martini',
-  'momo-sour',
-  'apple-tart',
+  'irish-coffee',
   'mango-sticky-rice',
+  'peanut',
+  'pistachio',
   'salted-cc',
+  'tangyuan',
 ] as const
 
 export function coasterNumberFromId(coasterId: string): number | null {

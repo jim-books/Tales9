@@ -46,27 +46,27 @@ export function getFallWaitClip(def: SpriteAnimDef): SpriteFrameSet | undefined 
   return def.idle ?? def.wave
 }
 
-// ─── Apple Tart ──────────────────────────────────────────────────────────────
+// ─── Irish Coffee ─────────────────────────────────────────────────────────────
 
-const APPLE_TART_DEF: SpriteAnimDef = {
-  character: 'apple',
+const IRISH_COFFEE_DEF: SpriteAnimDef = {
+  character: 'irish_coffee',
   fall: {
-    frames: Array.from({ length: 10 }, (_, i) =>
-      `/sprites/apple-tart/fall/Apple8bitFallSep${i + 1}.png`,
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/irish-coffee/fall/IrishCoffee8bitFall${i + 1}.png`,
     ),
     animationSpeed: 0.15,
     loops: 2,
   },
   walk: {
-    frames: Array.from({ length: 5 }, (_, i) =>
-      `/sprites/apple-tart/walk/Apple8bitWalkSep${i + 1}.png`,
+    frames: Array.from({ length: 4 }, (_, i) =>
+      `/sprites/irish-coffee/walk/IrishCoffee8bitWalk${i + 1}.png`,
     ),
     animationSpeed: 0.12,
     loops: -1,
   },
   wave: {
-    frames: Array.from({ length: 9 }, (_, i) =>
-      `/sprites/apple-tart/wave/Apple8bitWave${i + 1}.png`,
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/irish-coffee/wave/IrishCoffee8bitWave${i + 1}.png`,
     ),
     animationSpeed: 0.12,
     loops: -1,
@@ -102,6 +102,62 @@ const MANGOSTICKY_RICE_DEF: SpriteAnimDef = {
   scale: 1.0125,
 }
 
+// ─── Peanut ───────────────────────────────────────────────────────────────────
+
+const PEANUT_DEF: SpriteAnimDef = {
+  character: 'peanut',
+  fall: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/peanut/fall/Peanut8bitFall${i + 1}.png`,
+    ),
+    animationSpeed: 0.15,
+    loops: 2,
+  },
+  walk: {
+    frames: Array.from({ length: 4 }, (_, i) =>
+      `/sprites/peanut/walk/Peanut8bitWalk${i + 1}.png`,
+    ),
+    animationSpeed: 0.12,
+    loops: -1,
+  },
+  idle: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/peanut/idle/Peanut8bitYawn${i + 1}.png`,
+    ),
+    animationSpeed: 0.1,
+    loops: -1,
+  },
+  scale: 1.0125,
+}
+
+// ─── Pistachio ────────────────────────────────────────────────────────────────
+
+const PISTACHIO_DEF: SpriteAnimDef = {
+  character: 'pistachio',
+  fall: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/pistachio/fall/Pistachio8bitFall${i + 1}.png`,
+    ),
+    animationSpeed: 0.15,
+    loops: 2,
+  },
+  walk: {
+    frames: Array.from({ length: 4 }, (_, i) =>
+      `/sprites/pistachio/walk/Pistachio8bitWalk${i + 1}.png`,
+    ),
+    animationSpeed: 0.12,
+    loops: -1,
+  },
+  idle: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/pistachio/idle/Pistachio8bitIDLE${i + 1}.png`,
+    ),
+    animationSpeed: 0.1,
+    loops: -1,
+  },
+  scale: 1.0125,
+}
+
 // ─── Salted / SbCc character ─────────────────────────────────────────────────-
 
 const SB_CC_DEF: SpriteAnimDef = {
@@ -130,6 +186,34 @@ const SB_CC_DEF: SpriteAnimDef = {
   scale: 1.0125,
 }
 
+// ─── Tangyuan ─────────────────────────────────────────────────────────────────
+
+const TANGYUAN_DEF: SpriteAnimDef = {
+  character: 'tangyuan',
+  fall: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/tangyuan/fall/Tangyuan8bitFall${i + 1}.png`,
+    ),
+    animationSpeed: 0.15,
+    loops: 2,
+  },
+  walk: {
+    frames: Array.from({ length: 4 }, (_, i) =>
+      `/sprites/tangyuan/walk/Tangyuan8bitWalk${i + 1}.png`,
+    ),
+    animationSpeed: 0.12,
+    loops: -1,
+  },
+  idle: {
+    frames: Array.from({ length: 8 }, (_, i) =>
+      `/sprites/tangyuan/idle/Tangyuan8bitJump${i + 1}.png`,
+    ),
+    animationSpeed: 0.1,
+    loops: -1,
+  },
+  scale: 1.0125,
+}
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 /**
@@ -137,9 +221,12 @@ const SB_CC_DEF: SpriteAnimDef = {
  * IngredientSprite checks this at construction time.
  */
 export const spriteRegistry = new Map<string, SpriteAnimDef>([
-  ['apple', APPLE_TART_DEF],
+  ['irish_coffee', IRISH_COFFEE_DEF],
   ['mangosticky_rice', MANGOSTICKY_RICE_DEF],
+  ['peanut', PEANUT_DEF],
+  ['pistachio', PISTACHIO_DEF],
   ['sb_cc', SB_CC_DEF],
+  ['tangyuan', TANGYUAN_DEF],
 ])
 
 /**
