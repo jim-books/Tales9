@@ -2,8 +2,11 @@ import { useAppStore } from '../store/useAppStore'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 
 const px = (n: number): string => Math.round(n).toString()
-const stateGlyph = (state: 'preview' | 'confirmed' | 'inactive'): string =>
-  state === 'confirmed' ? '◉' : state === 'preview' ? '◌' : '○'
+const stateGlyph = (state: 'preview' | 'confirmed' | 'lost'): string => {
+  if (state === 'confirmed') return '◉'
+  if (state === 'preview') return '◌'
+  return '◍'
+}
 
 /**
  * DiagnosticsOverlay

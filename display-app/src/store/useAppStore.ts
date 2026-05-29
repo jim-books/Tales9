@@ -171,11 +171,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   removeCoaster: (coasterId) =>
     set((s) => ({
-      coasters: s.coasters.map((c) =>
-        c.id === coasterId
-          ? { ...c, detectionState: 'inactive', detected: false }
-          : c,
-      ),
+      coasters: s.coasters.filter((c) => c.id !== coasterId),
     })),
 
   assignDrinkToCoaster: (coasterId, drinkId) =>

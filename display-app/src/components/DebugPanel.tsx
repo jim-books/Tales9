@@ -7,11 +7,10 @@ import type { MappingMode } from '../data/coasterDrinkMapping'
 const px = (n: number): string => Math.round(n).toString()
 const norm = (n: number): string => n.toFixed(3)
 const ratio = (n: number): string => n.toFixed(3)
-const stateGlyph = (state: 'preview' | 'confirmed' | 'lost' | 'inactive'): string => {
+const stateGlyph = (state: 'preview' | 'confirmed' | 'lost'): string => {
   if (state === 'confirmed') return '◉'
   if (state === 'preview') return '◌'
-  if (state === 'lost') return '◍'
-  return '○'
+  return '◍'
 }
 
 export interface DebugPanelProps {

@@ -6,7 +6,7 @@ export type OrderStatus = 'pending' | 'preparing' | 'on_the_way' | 'arrived'
 export type GameType = 'truth_or_dare' | 'kings_game'
 export type UserColor = 'blue' | 'green' | 'orange' | 'purple'
 export type UserEdge = 'top' | 'right' | 'bottom' | 'left'
-export type CoasterDetectionState = 'preview' | 'confirmed' | 'inactive'
+export type CoasterDetectionState = 'preview' | 'confirmed' | 'lost'
 
 export interface DrinkProfile {
   id: string

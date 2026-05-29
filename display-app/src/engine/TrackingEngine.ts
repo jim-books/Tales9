@@ -15,18 +15,25 @@ import {
  */
 
 /** Maximum distance (in raw input units) for three points to be grouped as one coaster */
-const CLUSTER_RADIUS = 0.13 // normalised units (tuned from multi-sample debug captures)
+const CLUSTER_RADIUS = 0.14 // normalised units (tuned from multi-sample debug captures)
 
 /** How long (ms) a coaster must be absent before it's considered removed */
-export const REMOVAL_DEBOUNCE_MS = 12_000
+export const REMOVAL_DEBOUNCE_MS = 2_000
+const CLUSTER_DISTANCE_LIMIT = CLUSTER_RADIUS * 1.1
+const MIN_CLUSTER_AREA = 0.00001
+const JITTER_THRESHOLD_NORM = 0.025
+const VARIANCE_RESET_DISTANCE_NORM = 0.06
+const VARIANCE_RESET_GAP_MS = 350
+const NORMALIZED_CANVAS = 1900
 
-export type TrackedCoasterState = 'preview' | 'confirmed'
+export type TrackedCoasterState = 'preview' | 'confirmed' | 'lost'
 
 export interface TrackedCoaster {
   id: string
   templateId: string
   signature: CoasterTouchSignature
   centroid: Point   // display-space px
+  ratio: [number, number, number]
   lastSeenAt: number
   active: boolean
   state: TrackedCoasterState
@@ -69,6 +76,7 @@ export interface TrackingFrameResult {
 }
 
 interface ClusterEvaluation {
+  indices: [number, number, number]
   cluster: CoasterTouchSignature
   centroid: Point
   ratio: [number, number, number]
@@ -76,6 +84,7 @@ interface ClusterEvaluation {
   area: number
   matches: ClusterTypeMatch[]
   bestTemplate: CoasterTemplate | null
+  bestDelta: number | null
 }
 
 function valueInRange(value: number, [min, max]: [number, number]): boolean {
@@ -92,6 +101,8 @@ function ratioDelta(
 export class TrackingEngine {
   private tracked = new Map<string, TrackedCoaster>()
   private mapper: CalibrationMapper
+  private templateCentroidHistory = new Map<string, Point[]>()
+  private templateCentroidHistoryAt = new Map<string, number>()
   private lastDiagnosis: FrameDiagnosis = {
     rawTouchPoints: [],
     clusters: [],
@@ -114,59 +125,70 @@ export class TrackingEngine {
       coaster.active = false
     }
 
-    const evaluations = clusters.map((cluster) => this.evaluateCluster(cluster, templates))
-    const matchedTemplates = new Set<string>()
+    const evaluations = clusters.map((candidate) => this.evaluateCluster(candidate, templates))
+    const selected = this.selectNonOverlappingCandidates(evaluations)
+    const acceptedEvaluations: ClusterEvaluation[] = []
 
-    for (const entry of evaluations) {
-      const template = entry.bestTemplate
-      if (!template) {
+    for (const entry of selected) {
+      if (!entry.bestTemplate) {
         events.push({ type: 'rejected', centroid: entry.centroid })
         continue
       }
-
-      if (matchedTemplates.has(template.id)) {
+      if (!this.passesVarianceGate(entry.bestTemplate.id, entry.centroid, now)) {
         events.push({ type: 'rejected', centroid: entry.centroid })
         continue
       }
-      matchedTemplates.add(template.id)
+      acceptedEvaluations.push(entry)
+    }
 
-      const existing = this.tracked.get(template.id)
-      if (!existing) {
-        this.tracked.set(template.id, {
-          id: template.id,
-          templateId: template.id,
-          signature: entry.cluster,
-          centroid: entry.centroid,
-          lastSeenAt: now,
-          active: true,
-          state: 'preview',
-          seenFrames: 1,
-        })
-        events.push({
-          type: 'preview_started',
-          coasterId: template.id,
-          centroid: entry.centroid,
-          templateId: template.id,
-        })
-        continue
-      }
+    const detectionsByTemplate = this.dedupeByTemplateId(acceptedEvaluations)
 
-      existing.signature = entry.cluster
-      existing.centroid = entry.centroid
-      existing.lastSeenAt = now
-      existing.active = true
+    for (const entry of detectionsByTemplate) {
+      if (!entry.bestTemplate) continue
+      const coasterId = entry.bestTemplate.id
+      const existing = this.tracked.get(coasterId)
 
-      if (existing.state === 'preview') {
-        existing.seenFrames += 1
-        if (existing.seenFrames >= COASTER_CONFIRM_FRAMES) {
-          existing.state = 'confirmed'
+      if (existing) {
+        existing.signature = entry.cluster
+        existing.centroid = entry.centroid
+        existing.ratio = entry.ratio
+        existing.templateId = entry.bestTemplate.id
+        existing.lastSeenAt = now
+        existing.active = true
+
+        if (existing.state === 'preview') {
+          existing.seenFrames += 1
+          if (existing.seenFrames >= COASTER_CONFIRM_FRAMES) {
+            existing.state = 'confirmed'
+            events.push({
+              type: 'confirmed',
+              coasterId: existing.id,
+              centroid: existing.centroid,
+              templateId: existing.templateId,
+            })
+          } else {
+            events.push({
+              type: 'updated',
+              coasterId: existing.id,
+              centroid: existing.centroid,
+              templateId: existing.templateId,
+              state: existing.state,
+            })
+          }
+        } else if (existing.state === 'lost') {
+          // Require a fresh confirm window after a dropout to avoid noise
+          // instantly resurrecting a coaster and canceling the fade-out.
+          existing.state = 'preview'
+          existing.seenFrames = 1
           events.push({
-            type: 'confirmed',
+            type: 'updated',
             coasterId: existing.id,
             centroid: existing.centroid,
             templateId: existing.templateId,
+            state: existing.state,
           })
         } else {
+          existing.state = 'confirmed'
           events.push({
             type: 'updated',
             coasterId: existing.id,
@@ -176,26 +198,51 @@ export class TrackingEngine {
           })
         }
       } else {
+        this.tracked.set(coasterId, {
+          id: coasterId,
+          templateId: entry.bestTemplate.id,
+          signature: entry.cluster,
+          centroid: entry.centroid,
+          ratio: entry.ratio,
+          lastSeenAt: now,
+          active: true,
+          state: 'preview',
+          seenFrames: 1,
+        })
         events.push({
-          type: 'updated',
-          coasterId: existing.id,
-          centroid: existing.centroid,
-          templateId: existing.templateId,
-          state: existing.state,
+          type: 'preview_started',
+          coasterId,
+          centroid: entry.centroid,
+          templateId: entry.bestTemplate.id,
         })
       }
     }
 
     for (const [id, coaster] of this.tracked.entries()) {
-      if (!coaster.active && now - coaster.lastSeenAt > REMOVAL_DEBOUNCE_MS) {
+      if (coaster.active) continue
+      const missingForMs = now - coaster.lastSeenAt
+      if (missingForMs > REMOVAL_DEBOUNCE_MS) {
         this.tracked.delete(id)
         events.push({ type: 'removed', coasterId: id, templateId: coaster.templateId })
+        continue
       }
+
+      if (coaster.state !== 'lost') {
+        coaster.state = 'lost'
+        coaster.seenFrames = 0
+      }
+      events.push({
+        type: 'updated',
+        coasterId: coaster.id,
+        centroid: coaster.centroid,
+        templateId: coaster.templateId,
+        state: coaster.state,
+      })
     }
 
     this.lastDiagnosis = {
       rawTouchPoints: rawPoints,
-      clusters: evaluations.map((entry) => ({
+      clusters: selected.map((entry) => ({
         points: entry.cluster,
         centroid: entry.centroid,
         ratio: entry.ratio,
@@ -222,11 +269,11 @@ export class TrackingEngine {
   }
 
   private evaluateCluster(
-    cluster: CoasterTouchSignature,
+    cluster: { points: CoasterTouchSignature; indices: [number, number, number] },
     templates: CoasterTemplate[],
   ): ClusterEvaluation {
-    const metrics = signatureMetrics(cluster)
-    const centroid = this.mapper.centroidOf(cluster)
+    const metrics = signatureMetrics(cluster.points)
+    const centroid = this.mapper.centroidOf(cluster.points)
 
     const matches = templates
       .map((template) => {
@@ -247,41 +294,114 @@ export class TrackingEngine {
 
     const bestTemplateId = matches.find((m) => m.qualifies)?.typeId ?? null
     const bestTemplate = templates.find((t) => t.id === bestTemplateId) ?? null
+    const bestDelta = matches.find((m) => m.qualifies)?.delta ?? null
 
     return {
-      cluster,
+      indices: cluster.indices,
+      cluster: cluster.points,
       centroid,
       ratio: metrics.ratio,
       maxSide: metrics.maxSide,
       area: metrics.area,
       matches,
       bestTemplate,
+      bestDelta,
     }
   }
 
-  private clusterPoints(points: Point[]): CoasterTouchSignature[] {
-    // Naive O(n³) grouping — fine for ≤12 simultaneous touch points
-    const used = new Set<number>()
-    const clusters: CoasterTouchSignature[] = []
-
-    for (let i = 0; i < points.length; i++) {
-      if (used.has(i)) continue
-      const group = [i]
-
-      for (let j = i + 1; j < points.length; j++) {
-        if (used.has(j)) continue
-        if (CalibrationMapper.distance(points[i], points[j]) < CLUSTER_RADIUS) {
-          group.push(j)
+  private clusterPoints(points: Point[]): Array<{ points: CoasterTouchSignature; indices: [number, number, number] }> {
+    const clusters: Array<{ points: CoasterTouchSignature; indices: [number, number, number] }> = []
+    for (let i = 0; i < points.length - 2; i++) {
+      for (let j = i + 1; j < points.length - 1; j++) {
+        for (let k = j + 1; k < points.length; k++) {
+          const p1 = points[i]
+          const p2 = points[j]
+          const p3 = points[k]
+          const d12 = CalibrationMapper.distance(p1, p2)
+          const d23 = CalibrationMapper.distance(p2, p3)
+          const d31 = CalibrationMapper.distance(p3, p1)
+          const maxDistance = Math.max(d12, d23, d31)
+          if (maxDistance > CLUSTER_DISTANCE_LIMIT) continue
+          const area = Math.abs(
+            p1.x * (p2.y - p3.y) +
+              p2.x * (p3.y - p1.y) +
+              p3.x * (p1.y - p2.y),
+          ) / 2
+          if (area <= MIN_CLUSTER_AREA) continue
+          clusters.push({
+            indices: [i, j, k],
+            points: [p1, p2, p3],
+          })
         }
       }
+    }
+    return clusters
+  }
 
-      if (group.length >= 3) {
-        const [a, b, c] = group.slice(0, 3)
-        clusters.push([points[a], points[b], points[c]])
-        group.slice(0, 3).forEach((idx) => used.add(idx))
-      }
+  private selectNonOverlappingCandidates(evaluations: ClusterEvaluation[]): ClusterEvaluation[] {
+    const scored = evaluations
+      .map((entry) => ({
+        entry,
+        score:
+          entry.bestTemplate && entry.bestDelta !== null
+            ? 100 - entry.bestDelta * 1000 + entry.area * 100
+            : -(entry.matches[0]?.delta ?? 999),
+      }))
+      .sort((a, b) => b.score - a.score)
+
+    const selected: ClusterEvaluation[] = []
+    const usedPoints = new Set<number>()
+
+    for (const { entry } of scored) {
+      if (entry.indices.some((idx) => usedPoints.has(idx))) continue
+      selected.push(entry)
+      entry.indices.forEach((idx) => usedPoints.add(idx))
+      if (selected.length >= 4) break
     }
 
-    return clusters
+    return selected
+  }
+
+  private passesVarianceGate(templateId: string, centroid: Point, now: number): boolean {
+    const history = this.templateCentroidHistory.get(templateId) ?? []
+    const lastAt = this.templateCentroidHistoryAt.get(templateId) ?? null
+    const gapMs = lastAt === null ? null : now - lastAt
+    const last = history.length > 0 ? history[history.length - 1] : null
+    const jumpNorm = last ? CalibrationMapper.distance(last, centroid) / NORMALIZED_CANVAS : null
+
+    const shouldReset =
+      history.length === 0 ||
+      (gapMs !== null && gapMs > VARIANCE_RESET_GAP_MS) ||
+      (jumpNorm !== null && jumpNorm > VARIANCE_RESET_DISTANCE_NORM)
+
+    const baseHistory = shouldReset ? [] : history
+    const nextHistory = [...baseHistory, centroid].slice(-3)
+    this.templateCentroidHistory.set(templateId, nextHistory)
+    this.templateCentroidHistoryAt.set(templateId, now)
+
+    if (nextHistory.length < 3) return true
+    const mean = nextHistory.reduce(
+      (acc, p) => ({ x: acc.x + p.x / nextHistory.length, y: acc.y + p.y / nextHistory.length }),
+      { x: 0, y: 0 },
+    )
+    const maxJitterNorm = nextHistory.reduce((maxJitter, p) => {
+      const jitter = CalibrationMapper.distance(p, mean) / NORMALIZED_CANVAS
+      return Math.max(maxJitter, jitter)
+    }, 0)
+    return maxJitterNorm <= JITTER_THRESHOLD_NORM
+  }
+
+  /** At most one detection per template id per frame (best delta wins). */
+  private dedupeByTemplateId(detections: ClusterEvaluation[]): ClusterEvaluation[] {
+    const bestByTemplate = new Map<string, ClusterEvaluation>()
+    for (const entry of detections) {
+      if (!entry.bestTemplate || entry.bestDelta === null) continue
+      const templateId = entry.bestTemplate.id
+      const existing = bestByTemplate.get(templateId)
+      if (!existing || entry.bestDelta < (existing.bestDelta ?? Number.POSITIVE_INFINITY)) {
+        bestByTemplate.set(templateId, entry)
+      }
+    }
+    return Array.from(bestByTemplate.values())
   }
 }

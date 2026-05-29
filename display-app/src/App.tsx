@@ -45,7 +45,7 @@ function MainView(): JSX.Element {
     clusters: [],
   })
   const [trackingSurface, setTrackingSurface] = useState<HTMLDivElement | null>(null)
-  const [captureTargetTemplateId, setCaptureTargetTemplateId] = useState('coaster-3')
+  const [captureTargetTemplateId, setCaptureTargetTemplateId] = useState('coaster-1')
   const [capturedSignatures, setCapturedSignatures] = useState<CoasterTouchSignature[]>([])
 
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
@@ -109,6 +109,13 @@ function MainView(): JSX.Element {
           dispatcher.onCoasterRemoved(event.coasterId)
         }
       }
+
+      const trackedIds = new Set(tracked.map((c) => c.id))
+      for (const storeCoaster of useAppStore.getState().coasters) {
+        if (trackedIds.has(storeCoaster.id)) continue
+        removeCoaster(storeCoaster.id)
+        dispatcher.onCoasterRemoved(storeCoaster.id)
+      }
     })
 
     if (trackingSurface) {
@@ -166,7 +173,7 @@ function MainView(): JSX.Element {
 
   const handleToggleCoaster = (idx: number) => {
     const coasterNumber = idx + 1
-    const id = `demo-coaster-${coasterNumber}`
+    const id = `coaster-${coasterNumber}`
     const drinkId = hardcodedDrinkIdForCoaster(id)
     const centroid = DEMO_CENTROIDS[idx]
     if (!centroid) return
