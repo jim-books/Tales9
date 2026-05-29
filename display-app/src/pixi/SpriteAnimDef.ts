@@ -71,7 +71,7 @@ const APPLE_TART_DEF: SpriteAnimDef = {
     animationSpeed: 0.12,
     loops: -1,
   },
-  scale: 0.75,
+  scale: 1.0125,
 }
 
 // ─── Mango Sticky Rice ────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ const MANGOSTICKY_RICE_DEF: SpriteAnimDef = {
     animationSpeed: 0.1,
     loops: -1,
   },
-  scale: 0.75,
+  scale: 1.0125,
 }
 
 // ─── Salted / SbCc character ─────────────────────────────────────────────────-
@@ -127,7 +127,7 @@ const SB_CC_DEF: SpriteAnimDef = {
     animationSpeed: 0.1,
     loops: -1,
   },
-  scale: 0.75,
+  scale: 1.0125,
 }
 
 // ─── Registry ────────────────────────────────────────────────────────────────

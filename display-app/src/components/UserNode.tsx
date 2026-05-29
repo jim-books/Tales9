@@ -28,6 +28,9 @@ const APPROACH_INTENT_MIN_PX = 6
 const PANEL_WIDTH = 360
 const PANEL_HEIGHT = 480
 const PANEL_SCALE = 1.05
+const NODE_VISIBLE_SIZE = 64
+const NODE_HITBOX_SCALE = 1.6
+const NODE_HITBOX_SIZE = NODE_VISIBLE_SIZE * NODE_HITBOX_SCALE
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -441,42 +444,53 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       }}
       data-user-edge={displayEdge}
     >
-      {/* Drag handle / toggle button */}
+      {/* Invisible hit target — 60% larger than the visible badge */}
       <div
         style={{
           position: 'relative',
           zIndex: 2,
-          width: 64,
-          height: 64,
-          borderRadius: '50%',
-          background: 'var(--color-bg, #0d0d0d)',
-          border: '3px solid var(--user-color)',
+          width: NODE_HITBOX_SIZE,
+          height: NODE_HITBOX_SIZE,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          boxShadow: '0 0 16px var(--user-color)',
-          userSelect: 'none',
           touchAction: 'none',
-          transition: 'transform 0.15s ease',
-          fontSize: 20,
-          fontWeight: 800,
-          color: 'var(--user-color)',
+          userSelect: 'none',
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       >
-        <span
+        <div
           style={{
-            display: 'inline-block',
-            transform: `rotate(${rotation}deg)`,
+            width: NODE_VISIBLE_SIZE,
+            height: NODE_VISIBLE_SIZE,
+            borderRadius: '50%',
+            background: 'var(--color-bg, #0d0d0d)',
+            border: '3px solid var(--user-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 16px var(--user-color)',
             transition: 'transform 0.15s ease',
+            fontSize: 20,
+            fontWeight: 800,
+            color: 'var(--user-color)',
+            pointerEvents: 'none',
           }}
         >
-          {node.ownerIndex + 1}
-        </span>
+          <span
+            style={{
+              display: 'inline-block',
+              transform: `rotate(${rotation}deg)`,
+              transition: 'transform 0.15s ease',
+            }}
+          >
+            {node.ownerIndex + 1}
+          </span>
+        </div>
       </div>
 
       {/* Expanded panel */}

@@ -1,7 +1,7 @@
 import { Container, Graphics, type Ticker } from 'pixi.js'
 import type { DrinkProfile } from '../types'
 
-const COASTER_ANIMATION_SCALE = 1.7
+const COASTER_ANIMATION_SCALE = 2.975
 
 /** Convert CSS hex string (#RRGGBB) to PixiJS colour number */
 function hexToNum(hex: string): number {
