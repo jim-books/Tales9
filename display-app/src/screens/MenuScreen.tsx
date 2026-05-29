@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
-import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
+import { loadDrinkMenuMedia } from '../data/drinkMenuMedia'
 import { usePressAction } from './usePressAction'
 import './screens.css'
 
@@ -27,14 +27,59 @@ interface MenuDrinkMediaProps {
   fallbackGradient: string
 }
 
+const MAX_CONCURRENT_MENU_VIDEOS = 4
+const activeMenuVideos = new Set<HTMLVideoElement>()
+
+function capConcurrentMenuPlayback(videoEl: HTMLVideoElement): void {
+  activeMenuVideos.add(videoEl)
+  while (activeMenuVideos.size > MAX_CONCURRENT_MENU_VIDEOS) {
+    const oldest = activeMenuVideos.values().next().value as HTMLVideoElement | undefined
+    if (!oldest) break
+    oldest.pause()
+    oldest.currentTime = 0
+    activeMenuVideos.delete(oldest)
+  }
+}
+
 function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMediaProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [inView, setInView] = useState(false)
+  const [mediaSrc, setMediaSrc] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
 
-  const mediaSrc = getDrinkMenuMedia(drinkId)
   const canPlayVideo = Boolean(mediaSrc) && inView && !loadError
+
+  useEffect(() => {
+    if (!inView) {
+      if (videoRef.current) {
+        videoRef.current.pause()
+        activeMenuVideos.delete(videoRef.current)
+      }
+      setMediaSrc(null)
+      return
+    }
+
+    let cancelled = false
+    setLoadError(false)
+
+    void loadDrinkMenuMedia(drinkId)
+      .then((url) => {
+        if (cancelled) return
+        if (!url) {
+          setLoadError(true)
+          return
+        }
+        setMediaSrc(url)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [drinkId, inView])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -45,15 +90,14 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
     }
 
     const scrollRoot = containerRef.current.closest('.menu-screen__scroll')
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInView(entry.isIntersecting)
       },
       {
         root: scrollRoot instanceof Element ? scrollRoot : null,
-        rootMargin: '80px 0px',
-        threshold: 0.1,
+        rootMargin: '48px 0px',
+        threshold: 0.35,
       },
     )
 
@@ -63,6 +107,7 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
 
   useEffect(() => {
     if (!canPlayVideo || !videoRef.current) return
+    capConcurrentMenuPlayback(videoRef.current)
     void videoRef.current.play().catch(() => {
       setLoadError(true)
     })
@@ -71,7 +116,16 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
   useEffect(() => {
     if (canPlayVideo || !videoRef.current) return
     videoRef.current.pause()
+    activeMenuVideos.delete(videoRef.current)
   }, [canPlayVideo])
+
+  useEffect(() => {
+    return () => {
+      if (!videoRef.current) return
+      videoRef.current.pause()
+      activeMenuVideos.delete(videoRef.current)
+    }
+  }, [])
 
   return (
     <div
@@ -87,7 +141,7 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           onError={() => setLoadError(true)}
         />
       ) : (

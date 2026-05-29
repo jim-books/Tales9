@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "assets:reencode:menu": "powershell -ExecutionPolicy Bypass -File ./scripts/reencode-menu-videos.ps1"
   },
   "dependencies": {
     "firebase": "^12.12.1",

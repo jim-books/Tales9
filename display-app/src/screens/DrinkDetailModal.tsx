@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getDrinkById } from '../data/drinkCatalog'
-import { getDrinkMenuMedia } from '../data/drinkMenuMedia'
+import { loadDrinkMenuMedia } from '../data/drinkMenuMedia'
 import type { UserColor } from '../types'
 import { usePressAction } from './usePressAction'
 import './screens.css'
@@ -24,19 +24,65 @@ interface DrinkDetailMediaProps {
   fallbackGradient: string
 }
 
+const MAX_CONCURRENT_DRINK_VIDEOS = 1
+const activeDrinkVideos = new Set<HTMLVideoElement>()
+
+function capConcurrentDrinkPlayback(videoEl: HTMLVideoElement): void {
+  activeDrinkVideos.add(videoEl)
+  while (activeDrinkVideos.size > MAX_CONCURRENT_DRINK_VIDEOS) {
+    const oldest = activeDrinkVideos.values().next().value as HTMLVideoElement | undefined
+    if (!oldest) break
+    oldest.pause()
+    oldest.currentTime = 0
+    activeDrinkVideos.delete(oldest)
+  }
+}
+
 function DrinkDetailMedia({ drinkId, drinkName, fallbackGradient }: DrinkDetailMediaProps): JSX.Element {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [mediaSrc, setMediaSrc] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
 
-  const mediaSrc = getDrinkMenuMedia(drinkId)
   const canPlayVideo = Boolean(mediaSrc) && !loadError
 
   useEffect(() => {
+    let cancelled = false
+    setMediaSrc(null)
+    setLoadError(false)
+
+    void loadDrinkMenuMedia(drinkId)
+      .then((url) => {
+        if (cancelled) return
+        if (!url) {
+          setLoadError(true)
+          return
+        }
+        setMediaSrc(url)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [drinkId])
+
+  useEffect(() => {
     if (!canPlayVideo || !videoRef.current) return
+    capConcurrentDrinkPlayback(videoRef.current)
     void videoRef.current.play().catch(() => {
       setLoadError(true)
     })
   }, [canPlayVideo, drinkId])
+
+  useEffect(() => {
+    return () => {
+      if (!videoRef.current) return
+      videoRef.current.pause()
+      activeDrinkVideos.delete(videoRef.current)
+    }
+  }, [])
 
   return (
     <div className="drink-detail__media" aria-label={`${drinkName} animation`}>
