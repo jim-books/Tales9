@@ -110,7 +110,6 @@ export function DrinkDetailModal({
             {CATEGORY_LABELS[drink.category] ?? drink.category}
           </span>
           <h2 className="drink-detail__name">{drink.name}</h2>
-          <p className="drink-detail__flavor">{drink.flavorProfile}</p>
           <div className="drink-detail__tags">
             {drink.ingredients.map((ingredient) => (
               <span key={ingredient} className="drink-detail__tag">

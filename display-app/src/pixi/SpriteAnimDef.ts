@@ -46,6 +46,34 @@ export function getFallWaitClip(def: SpriteAnimDef): SpriteFrameSet | undefined 
   return def.idle ?? def.wave
 }
 
+// ─── Apple Tart ───────────────────────────────────────────────────────────────
+
+const APPLE_TART_DEF: SpriteAnimDef = {
+  character: 'apple_tart',
+  fall: {
+    frames: Array.from({ length: 10 }, (_, i) =>
+      `/sprites/apple-tart/fall/Apple8bitFallSep${i + 1}.png`,
+    ),
+    animationSpeed: 0.15,
+    loops: 2,
+  },
+  walk: {
+    frames: Array.from({ length: 5 }, (_, i) =>
+      `/sprites/apple-tart/walk/Apple8bitWalkSep${i + 1}.png`,
+    ),
+    animationSpeed: 0.12,
+    loops: -1,
+  },
+  wave: {
+    frames: Array.from({ length: 9 }, (_, i) =>
+      `/sprites/apple-tart/wave/Apple8bitWave${i + 1}.png`,
+    ),
+    animationSpeed: 0.12,
+    loops: -1,
+  },
+  scale: 1.0125,
+}
+
 // ─── Irish Coffee ─────────────────────────────────────────────────────────────
 
 const IRISH_COFFEE_DEF: SpriteAnimDef = {
@@ -221,6 +249,7 @@ const TANGYUAN_DEF: SpriteAnimDef = {
  * IngredientSprite checks this at construction time.
  */
 export const spriteRegistry = new Map<string, SpriteAnimDef>([
+  ['apple_tart', APPLE_TART_DEF],
   ['irish_coffee', IRISH_COFFEE_DEF],
   ['mangosticky_rice', MANGOSTICKY_RICE_DEF],
   ['peanut', PEANUT_DEF],
