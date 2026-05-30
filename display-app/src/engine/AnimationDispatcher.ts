@@ -11,6 +11,7 @@ import { getDrinkById } from '../data/drinkCatalog'
 
 export const PENDING_CONFIRM_MS = 1_000
 export const PENDING_FAIL_FADE_MS = 1_000
+export const PENDING_LOST_GRACE_MS = 400
 export const LOST_GRACE_MS = 2_000
 export const LOST_RING_FADE_MS = 3_000
 export const LOST_TO_NPC_FADE_MS = 30_000
@@ -32,6 +33,7 @@ type CoasterLifecyclePhase = 'pending' | 'confirmed' | 'failing'
 
 interface LifecycleTimers {
   pendingConfirm?: ReturnType<typeof setTimeout>
+  pendingGrace?: ReturnType<typeof setTimeout>
   failEnd?: ReturnType<typeof setTimeout>
   ringFadeStart?: ReturnType<typeof setTimeout>
   spriteFadeStart?: ReturnType<typeof setTimeout>
@@ -124,11 +126,15 @@ export class AnimationDispatcher {
     state.lostSince = Date.now()
 
     if (state.phase === 'pending') {
-      state.phase = 'failing'
-      this.clearTimer(coasterId, 'pendingConfirm')
-      this.emit({ action: 'TWEEN_RING_ALPHA', coasterId, toAlpha: 0, durationMs: PENDING_FAIL_FADE_MS })
-      this.emit({ action: 'TWEEN_SPRITE_ALPHA', coasterId, toAlpha: 0, durationMs: PENDING_FAIL_FADE_MS })
-      this.schedule(coasterId, 'failEnd', PENDING_FAIL_FADE_MS, () => this.endCycle(coasterId))
+      this.schedule(coasterId, 'pendingGrace', PENDING_LOST_GRACE_MS, () => {
+        const next = this.lifecycle.get(coasterId)
+        if (!next || next.lostSince === null || next.phase !== 'pending') return
+        next.phase = 'failing'
+        this.clearTimer(coasterId, 'pendingConfirm')
+        this.emit({ action: 'TWEEN_RING_ALPHA', coasterId, toAlpha: 0, durationMs: PENDING_FAIL_FADE_MS })
+        this.emit({ action: 'TWEEN_SPRITE_ALPHA', coasterId, toAlpha: 0, durationMs: PENDING_FAIL_FADE_MS })
+        this.schedule(coasterId, 'failEnd', PENDING_FAIL_FADE_MS, () => this.endCycle(coasterId))
+      })
       return
     }
 
@@ -157,6 +163,12 @@ export class AnimationDispatcher {
 
     if (state.phase === 'failing' || state.lostSince === null) return
     state.lostSince = null
+
+    if (state.phase === 'pending') {
+      this.clearTimer(coasterId, 'pendingGrace')
+      return
+    }
+
     this.clearTimer(coasterId, 'ringFadeStart')
     this.clearTimer(coasterId, 'spriteFadeStart')
     this.clearTimer(coasterId, 'cycleEnd')
@@ -227,6 +239,7 @@ export class AnimationDispatcher {
 
   private clearAllTimers(coasterId: string): void {
     this.clearTimer(coasterId, 'pendingConfirm')
+    this.clearTimer(coasterId, 'pendingGrace')
     this.clearTimer(coasterId, 'failEnd')
     this.clearTimer(coasterId, 'ringFadeStart')
     this.clearTimer(coasterId, 'spriteFadeStart')

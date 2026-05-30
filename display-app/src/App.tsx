@@ -93,7 +93,10 @@ function MainView(): JSX.Element {
       }
 
       for (const event of frame.events) {
-        if (event.type === 'confirmed') {
+        // #region agent log
+        fetch('http://127.0.0.1:7379/ingest/6036d90d-37d6-4650-90f0-eba8f8a3cc28',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a7c9cd'},body:JSON.stringify({sessionId:'a7c9cd',location:'App.tsx:95',message:'Processing tracker event',data:{eventType:event.type,coasterId:'coasterId' in event ? event.coasterId : null,state:'state' in event ? event.state : null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (event.type === 'preview_started' || event.type === 'confirmed') {
           const storeState = useAppStore.getState()
           const existingDrinkId = storeState.coasters.find((c) => c.id === event.coasterId)?.drinkId ?? null
           const pendingDrinkId = storeState.coasterDrinkAssignments[event.coasterId] ?? null
@@ -107,7 +110,9 @@ function MainView(): JSX.Element {
             nextDispatcher.assignDrink(event.coasterId, resolvedDrinkId)
           }
           nextDispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
-          arriveOrderByCoaster(event.coasterId)
+          if (event.type === 'confirmed') {
+            arriveOrderByCoaster(event.coasterId)
+          }
         } else if (event.type === 'lost') {
           nextDispatcher.onCoasterLost(event.coasterId)
         } else if (event.type === 'recovered') {

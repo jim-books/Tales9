@@ -76,17 +76,38 @@ describe('AnimationDispatcher', () => {
     }
   })
 
-  it('losing a pending coaster fades out and ends cycle in one second', () => {
+  it('losing a pending coaster fades out and ends cycle after grace period', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
     dispatcher.onCoasterLost('c1')
 
-    expect(collected.some((c) => c.action === 'TWEEN_RING_ALPHA')).toBe(true)
-    expect(collected.some((c) => c.action === 'TWEEN_SPRITE_ALPHA')).toBe(true)
+    // At first, no fade-out commands are emitted because of the grace period
+    expect(collected.filter((c) => c.action === 'TWEEN_RING_ALPHA' && c.toAlpha === 0)).toHaveLength(0)
 
-    vi.advanceTimersByTime(1_000)
+    vi.advanceTimersByTime(400) // advance past pending grace
+    expect(collected.some((c) => c.action === 'TWEEN_RING_ALPHA' && c.toAlpha === 0)).toBe(true)
+    expect(collected.some((c) => c.action === 'TWEEN_SPRITE_ALPHA' && c.toAlpha === 0)).toBe(true)
+
+    vi.advanceTimersByTime(1_000) // advance past fail end
     expect(collected[collected.length - 1]).toEqual({ action: 'END_CYCLE', coasterId: 'c1' })
+  })
+
+  it('recovering a pending coaster during grace period preserves confirmation', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    
+    vi.advanceTimersByTime(300)
+    dispatcher.onCoasterLost('c1')
+    
+    vi.advanceTimersByTime(200) // less than 400ms grace
+    dispatcher.onCoasterVisible('c1', { x: 0, y: 0 })
+
+    vi.advanceTimersByTime(600) // remaining pending confirmation time
+    
+    // It should NOT end cycle
+    expect(collected.some((c) => c.action === 'END_CYCLE')).toBe(false)
   })
 
   it('two subscribers both receive all commands', () => {

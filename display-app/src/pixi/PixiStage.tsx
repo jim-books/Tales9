@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Application, Assets, Graphics, Text, TextStyle } from 'pixi.js'
+import { Application, Assets, Graphics, Text, TextStyle, Container } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
@@ -8,8 +8,10 @@ import { StandbyLayer } from './StandbyLayer'
 import { CoasterAnimation, drawOrbitalPreset, hexToNum, DEFAULT_PRESET } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
 import { GameLayer } from './GameLayer'
-import { ProximityBattle } from './ProximityBattle'
 import { AmbientPreviewLayer } from './AmbientPreviewLayer'
+import { findNearbyPairs } from '../engine/CoasterPairing'
+import { SynergyPairEffect } from './SynergyPairEffect'
+import { drinkPairSynergies, getFallbackSynergy } from '../data/drinkPairSynergies'
 import type { OrbitalPreset } from '../types'
 import type { AnimationDispatcher, AnimationCommand } from '../engine/AnimationDispatcher'
 
@@ -49,7 +51,8 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
   const animsRef = useRef(new Map<string, CoasterAnimation>())
   const spritesRef = useRef(new Map<string, IngredientSprite>())
   const gameLayerRef = useRef<GameLayer | null>(null)
-  const battlesRef = useRef(new Map<string, ProximityBattle>())
+  const synergyContainerRef = useRef<Container | null>(null)
+  const synergiesRef = useRef(new Map<string, SynergyPairEffect>())
   const previewsRef = useRef(new Map<string, {
     ring: Graphics
     vibe: Graphics
@@ -132,6 +135,10 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       el.appendChild(app.canvas)
       app.canvas.style.cssText =
         'position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;'
+
+      const synergyContainer = new Container()
+      app.stage.addChildAt(synergyContainer, 0)
+      synergyContainerRef.current = synergyContainer
 
       const standby = new StandbyLayer(app)
       standbyRef.current = standby
@@ -307,8 +314,12 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       spritesRef.current.clear()
       ringTweensRef.current.clear()
       spriteTweensRef.current.clear()
-      battlesRef.current.forEach((b) => b.destroy())
-      battlesRef.current.clear()
+      synergiesRef.current.forEach((s) => s.destroy())
+      synergiesRef.current.clear()
+      if (synergyContainerRef.current) {
+        synergyContainerRef.current.destroy({ children: true })
+        synergyContainerRef.current = null
+      }
       previewsRef.current.forEach((p) => {
         p.ring.destroy()
         p.vibe.destroy()
@@ -387,6 +398,10 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
     const unsubscribe = dispatcher.subscribe((cmd: AnimationCommand) => {
       const app = appRef.current
       if (!app) return
+
+      // #region agent log
+      fetch('http://127.0.0.1:7379/ingest/6036d90d-37d6-4650-90f0-eba8f8a3cc28',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a7c9cd'},body:JSON.stringify({sessionId:'a7c9cd',location:'PixiStage.tsx:403',message:'Handling dispatcher command',data:{cmdAction:cmd.action,coasterId:'coasterId' in cmd ? cmd.coasterId : null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       if (cmd.action === 'PLAY') {
         const existing = animsRef.current.get(cmd.coasterId)
@@ -487,8 +502,8 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       spritesRef.current.clear()
       ringTweensRef.current.clear()
       spriteTweensRef.current.clear()
-      battlesRef.current.forEach((b) => { b.unmount(); b.destroy() })
-      battlesRef.current.clear()
+      synergiesRef.current.forEach((s) => { s.unmount(); s.destroy() })
+      synergiesRef.current.clear()
       previewsRef.current.forEach((p) => {
         if (p.ring.parent) p.ring.parent.removeChild(p.ring)
         if (p.vibe.parent) p.vibe.parent.removeChild(p.vibe)
@@ -506,6 +521,9 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
     const clearPreview = (id: string): void => {
       const preview = previewsRef.current.get(id)
       if (!preview) return
+      // #region agent log
+      fetch('http://127.0.0.1:7379/ingest/6036d90d-37d6-4650-90f0-eba8f8a3cc28',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a7c9cd'},body:JSON.stringify({sessionId:'a7c9cd',location:'PixiStage.tsx:517',message:'Clearing preview',data:{id},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (preview.ring.parent) preview.ring.parent.removeChild(preview.ring)
       if (preview.vibe.parent) preview.vibe.parent.removeChild(preview.vibe)
       if (preview.label.parent) preview.label.parent.removeChild(preview.label)
@@ -523,6 +541,9 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       preset: OrbitalPreset,
       title: string,
     ): void => {
+      // #region agent log
+      fetch('http://127.0.0.1:7379/ingest/6036d90d-37d6-4650-90f0-eba8f8a3cc28',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a7c9cd'},body:JSON.stringify({sessionId:'a7c9cd',location:'PixiStage.tsx:533',message:'Upserting preview',data:{id,title},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const preview = previewsRef.current.get(id)
       const primaryColor = colorPalette[0]
       if (preview) {
@@ -562,6 +583,9 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
 
     const previewIds = new Set<string>()
     for (const c of coasters) {
+      // #region agent log
+      fetch('http://127.0.0.1:7379/ingest/6036d90d-37d6-4650-90f0-eba8f8a3cc28',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a7c9cd'},body:JSON.stringify({sessionId:'a7c9cd',location:'PixiStage.tsx:575',message:'Syncing store coaster',data:{id:c.id,detectionState:c.detectionState,drinkId:c.drinkId},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (c.detectionState !== 'preview') {
         clearPreview(c.id)
         continue
@@ -588,35 +612,42 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       if (!previewIds.has(previewId)) clearPreview(previewId)
     }
 
-    // ── Proximity battle detection ────────────────────────────────────────────
+    // ── Synergy pair detection ────────────────────────────────────────────
     const activePairKeys = new Set<string>()
-    const activeCoasters = coasters.filter(
-      (c) => c.detectionState === 'confirmed' && c.drinkId,
-    )
-    for (let i = 0; i < activeCoasters.length; i++) {
-      for (let j = i + 1; j < activeCoasters.length; j++) {
-        const a = activeCoasters[i]
-        const b = activeCoasters[j]
-        const dx = a.centroid.x - b.centroid.x
-        const dy = a.centroid.y - b.centroid.y
-        if (Math.sqrt(dx * dx + dy * dy) < PROXIMITY_THRESHOLD) {
-          const key = `${a.id}:${b.id}`
-          activePairKeys.add(key)
-          if (!battlesRef.current.has(key)) {
-            const battle = new ProximityBattle(app, a.centroid, b.centroid)
-            battle.mount(app.stage)
-            battlesRef.current.set(key, battle)
-          } else {
-            battlesRef.current.get(key)!.updatePositions(a.centroid, b.centroid)
-          }
+    const nearbyPairs = findNearbyPairs(coasters, PROXIMITY_THRESHOLD)
+
+    for (const pair of nearbyPairs) {
+      activePairKeys.add(pair.key)
+
+      if (!synergiesRef.current.has(pair.key)) {
+        // Resolve synergy config
+        const drinkId = pair.coasterA.drinkId!
+        const profile = drinkCatalog.find((d) => d.id === drinkId)
+        const name = profile?.name ?? 'UNKNOWN'
+        const colors = profile?.colorPalette ?? ['#66ccff', '#3399ff', '#99ccff']
+        const config = drinkPairSynergies[pair.drinkPairKey] ?? getFallbackSynergy(drinkId, name, colors)
+
+        const synergy = new SynergyPairEffect(app, pair.coasterA.centroid, pair.coasterB.centroid, config)
+        
+        // Mount to our dedicated back layer
+        if (synergyContainerRef.current) {
+          synergy.mount(synergyContainerRef.current)
+        } else {
+          synergy.mount(app.stage)
         }
+        
+        synergiesRef.current.set(pair.key, synergy)
+      } else {
+        synergiesRef.current.get(pair.key)!.updatePositions(pair.coasterA.centroid, pair.coasterB.centroid)
       }
     }
-    // Remove battles whose coasters moved apart
-    for (const [key, battle] of battlesRef.current) {
+
+    // Remove synergies whose coasters moved apart
+    for (const [key, synergy] of synergiesRef.current) {
       if (!activePairKeys.has(key)) {
-        battle.unmount(); battle.destroy()
-        battlesRef.current.delete(key)
+        synergy.unmount()
+        synergy.destroy()
+        synergiesRef.current.delete(key)
       }
     }
   }, [sessionActive, coasters])
