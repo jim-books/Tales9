@@ -370,9 +370,14 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
     e.stopPropagation()
   }, [])
 
+  const menuEntrySuppressUntilRef = useRef(0)
+
   const navigate = useCallback((s: PanelScreen) => {
+    if (s.view === 'menu') {
+      menuEntrySuppressUntilRef.current = Date.now() + 120
+    }
     setScreen(s)
-  }, [node.id])
+  }, [])
 
   const renderScreen = (): React.ReactNode => {
     switch (screen.view) {
@@ -390,6 +395,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
           <MenuScreen
             userColor={node.color}
             panelEdge={displayEdge}
+            menuEntrySuppressUntil={menuEntrySuppressUntilRef.current}
             onNavigate={navigate}
             onOrder={handleOrder}
           />

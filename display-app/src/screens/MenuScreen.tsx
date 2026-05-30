@@ -9,6 +9,7 @@ import './screens.css'
 interface MenuScreenProps {
   userColor: UserColor
   panelEdge: UserEdge
+  menuEntrySuppressUntil: number
   onNavigate: (screen: PanelScreen) => void
   onOrder: (drinkId: string) => void
 }
@@ -63,6 +64,7 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
 export function MenuScreen({
   userColor: _userColor,
   panelEdge,
+  menuEntrySuppressUntil,
   onNavigate,
   onOrder: _onOrder,
 }: MenuScreenProps): JSX.Element {
@@ -81,10 +83,11 @@ export function MenuScreen({
 
   const handleCardPress = useCallback(
     (drinkId: string) => {
-      if (Date.now() < suppressNavigateUntilRef.current) return
+      const now = Date.now()
+      if (now < suppressNavigateUntilRef.current || now < menuEntrySuppressUntil) return
       onNavigate({ view: 'detail', drinkId })
     },
-    [onNavigate],
+    [menuEntrySuppressUntil, onNavigate],
   )
 
   const handleScrollPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -104,7 +107,7 @@ export function MenuScreen({
     const localDragY = panelLocalDragY(panelEdge, deltaX, deltaY)
     if (!dragStateRef.current.dragging && Math.abs(localDragY) > 8) {
       dragStateRef.current.dragging = true
-      suppressNavigateUntilRef.current = Date.now() + 350
+      suppressNavigateUntilRef.current = Date.now() + 450
     }
     if (!dragStateRef.current.dragging) return
     const scrollDelta = menuScrollDelta(panelEdge, deltaX, deltaY)
@@ -115,7 +118,7 @@ export function MenuScreen({
   const clearDragState = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (dragStateRef.current.pointerId !== e.pointerId) return
     if (dragStateRef.current.dragging) {
-      suppressNavigateUntilRef.current = Date.now() + 250
+      suppressNavigateUntilRef.current = Date.now() + 450
     }
     dragStateRef.current.pointerId = -1
     dragStateRef.current.dragging = false
