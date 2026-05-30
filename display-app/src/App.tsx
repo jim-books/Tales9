@@ -48,6 +48,7 @@ function MainView(): JSX.Element {
   const [trackingSurface, setTrackingSurface] = useState<HTMLDivElement | null>(null)
   const [captureTargetTemplateId, setCaptureTargetTemplateId] = useState('coaster-1')
   const [capturedSignatures, setCapturedSignatures] = useState<CoasterTouchSignature[]>([])
+  const [dispatcher, setDispatcher] = useState<AnimationDispatcher | null>(null)
 
   const dispatcherRef = useRef<AnimationDispatcher | null>(null)
   const activeCoasterIdsRef = useRef<Set<string>>(new Set())
@@ -58,8 +59,9 @@ function MainView(): JSX.Element {
   useEffect(() => {
     const mapper = new CalibrationMapper()
     const tracker = new TrackingEngine(mapper)
-    const dispatcher = new AnimationDispatcher()
-    dispatcherRef.current = dispatcher
+    const nextDispatcher = new AnimationDispatcher()
+    dispatcherRef.current = nextDispatcher
+    setDispatcher(nextDispatcher)
 
     const adapter = new InputAdapter('touch', (points) => {
       const frame = tracker.processFrame(points)
@@ -102,13 +104,19 @@ function MainView(): JSX.Element {
 
           if (resolvedDrinkId) {
             assignDrinkToCoaster(event.coasterId, resolvedDrinkId)
-            dispatcher.assignDrink(event.coasterId, resolvedDrinkId)
+            nextDispatcher.assignDrink(event.coasterId, resolvedDrinkId)
           }
-          dispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
+          nextDispatcher.onCoasterConfirmed(event.coasterId, event.centroid)
           arriveOrderByCoaster(event.coasterId)
+        } else if (event.type === 'lost') {
+          nextDispatcher.onCoasterLost(event.coasterId)
+        } else if (event.type === 'recovered') {
+          nextDispatcher.onCoasterVisible(event.coasterId, event.centroid)
+        } else if (event.type === 'updated' && event.state !== 'lost') {
+          nextDispatcher.onCoasterVisible(event.coasterId, event.centroid)
         } else if (event.type === 'removed') {
           removeCoaster(event.coasterId)
-          dispatcher.onCoasterRemoved(event.coasterId)
+          nextDispatcher.onCoasterRemoved(event.coasterId)
         }
       }
 
@@ -116,7 +124,7 @@ function MainView(): JSX.Element {
       for (const storeCoaster of useAppStore.getState().coasters) {
         if (trackedIds.has(storeCoaster.id)) continue
         removeCoaster(storeCoaster.id)
-        dispatcher.onCoasterRemoved(storeCoaster.id)
+        nextDispatcher.onCoasterRemoved(storeCoaster.id)
       }
     })
 
@@ -126,7 +134,9 @@ function MainView(): JSX.Element {
 
     return () => {
       adapter.detach()
+      nextDispatcher.dispose()
       dispatcherRef.current = null
+      setDispatcher(null)
     }
   }, [
     upsertCoaster,
@@ -187,7 +197,7 @@ function MainView(): JSX.Element {
     if (activeCoasterIdsRef.current.has(id)) {
       // Remove existing demo coaster
       removeCoaster(id)
-      dispatcherRef.current?.onCoasterRemoved(id)
+      dispatcherRef.current?.endCoasterCycle(id)
       activeCoasterIdsRef.current.delete(id)
     } else {
       // Spawn demo coaster with drink pre-assigned
@@ -291,7 +301,11 @@ function MainView(): JSX.Element {
       }}
     >
       {/* Layer 0: PixiJS canvas (standby ambient + coaster animations + game layer) */}
-      <PixiStage onTrackingSurfaceReady={setTrackingSurface} showAmbientPreview={showAmbientPreview} />
+      <PixiStage
+        onTrackingSurfaceReady={setTrackingSurface}
+        showAmbientPreview={showAmbientPreview}
+        dispatcher={dispatcher}
+      />
 
       {/* Layer 1: Game result overlay (shown after arrow/crown animation completes) */}
       <GameOverlay />

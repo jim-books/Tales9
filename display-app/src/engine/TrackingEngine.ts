@@ -66,6 +66,8 @@ export interface FrameDiagnosis {
 export type TrackingEvent =
   | { type: 'preview_started'; coasterId: string; centroid: Point; templateId: string }
   | { type: 'confirmed'; coasterId: string; centroid: Point; templateId: string }
+  | { type: 'lost'; coasterId: string; centroid: Point; templateId: string }
+  | { type: 'recovered'; coasterId: string; centroid: Point; templateId: string; state: 'preview' | 'confirmed' }
   | { type: 'updated'; coasterId: string; centroid: Point; templateId: string; state: TrackedCoasterState }
   | { type: 'removed'; coasterId: string; templateId: string }
   | { type: 'rejected'; centroid: Point }
@@ -181,6 +183,13 @@ export class TrackingEngine {
           existing.state = 'preview'
           existing.seenFrames = 1
           events.push({
+            type: 'recovered',
+            coasterId: existing.id,
+            centroid: existing.centroid,
+            templateId: existing.templateId,
+            state: 'preview',
+          })
+          events.push({
             type: 'updated',
             coasterId: existing.id,
             centroid: existing.centroid,
@@ -230,6 +239,12 @@ export class TrackingEngine {
       if (coaster.state !== 'lost') {
         coaster.state = 'lost'
         coaster.seenFrames = 0
+        events.push({
+          type: 'lost',
+          coasterId: coaster.id,
+          centroid: coaster.centroid,
+          templateId: coaster.templateId,
+        })
       }
       events.push({
         type: 'updated',

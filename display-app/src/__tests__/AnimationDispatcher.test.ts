@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { AnimationDispatcher } from '../engine/AnimationDispatcher'
 import type { AnimationCommand } from '../engine/AnimationDispatcher'
 
@@ -7,17 +7,25 @@ describe('AnimationDispatcher', () => {
   let collected: AnimationCommand[]
 
   beforeEach(() => {
+    vi.useFakeTimers()
     dispatcher = new AnimationDispatcher()
     collected = []
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('subscribe receives commands emitted after subscription', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'irish-coffee')
-    dispatcher.onCoasterRemoved('c1')
-    expect(collected).toHaveLength(2)
-    expect(collected[0].action).toBe('STOP')
-    expect(collected[1].action).toBe('DESPAWN_SPRITE')
+    dispatcher.onCoasterConfirmed('c1', { x: 10, y: 20 })
+    expect(collected.map((c) => c.action)).toEqual([
+      'PLAY',
+      'SPAWN_SPRITE',
+      'TWEEN_RING_ALPHA',
+      'TWEEN_SPRITE_ALPHA',
+    ])
   })
 
   it('unsubscribe stops receiving commands', () => {
@@ -41,17 +49,19 @@ describe('AnimationDispatcher', () => {
     expect(collected).toHaveLength(0)
   })
 
-  it('onCoasterConfirmed with valid drinkId emits PLAY then SPAWN_SPRITE', () => {
+  it('onCoasterConfirmed with valid drinkId emits pending spawn + fade-in', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterConfirmed('c1', { x: 100, y: 200 })
 
-    expect(collected).toHaveLength(2)
+    expect(collected).toHaveLength(4)
 
     const play = collected[0]
     expect(play.action).toBe('PLAY')
     if (play.action === 'PLAY') {
       expect(play.coasterId).toBe('c1')
+      expect(play.position).toEqual({ x: 100, y: 200 })
+      expect(play.initialAlpha).toBe(0)
       expect(play.profile.id).toBe('irish-coffee')
       expect(play.profile.spriteCharacter).toBe('irish_coffee')
     }
@@ -62,16 +72,21 @@ describe('AnimationDispatcher', () => {
       expect(spawn.coasterId).toBe('c1')
       expect(spawn.character).toBe('irish_coffee')
       expect(spawn.position).toEqual({ x: 100, y: 200 })
+      expect(spawn.initialAlpha).toBe(0)
     }
   })
 
-  it('onCoasterRemoved emits STOP then DESPAWN_SPRITE', () => {
+  it('losing a pending coaster fades out and ends cycle in one second', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
-    dispatcher.onCoasterRemoved('c1')
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    dispatcher.onCoasterLost('c1')
 
-    expect(collected).toHaveLength(2)
-    expect(collected[0]).toEqual({ action: 'STOP', coasterId: 'c1' })
-    expect(collected[1]).toEqual({ action: 'DESPAWN_SPRITE', coasterId: 'c1' })
+    expect(collected.some((c) => c.action === 'TWEEN_RING_ALPHA')).toBe(true)
+    expect(collected.some((c) => c.action === 'TWEEN_SPRITE_ALPHA')).toBe(true)
+
+    vi.advanceTimersByTime(1_000)
+    expect(collected[collected.length - 1]).toEqual({ action: 'END_CYCLE', coasterId: 'c1' })
   })
 
   it('two subscribers both receive all commands', () => {
@@ -79,9 +94,10 @@ describe('AnimationDispatcher', () => {
     const b: AnimationCommand[] = []
     dispatcher.subscribe((cmd) => a.push(cmd))
     dispatcher.subscribe((cmd) => b.push(cmd))
-    dispatcher.onCoasterRemoved('c1')
-    expect(a).toHaveLength(2)
-    expect(b).toHaveLength(2)
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 5, y: 5 })
+    expect(a).toHaveLength(4)
+    expect(b).toHaveLength(4)
   })
 
   it('reassigning a drink changes future dispatches', () => {
@@ -90,7 +106,7 @@ describe('AnimationDispatcher', () => {
     dispatcher.assignDrink('c1', 'peanut')
     dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
 
-    expect(collected).toHaveLength(2)
+    expect(collected).toHaveLength(4)
     const play = collected[0]
     if (play.action === 'PLAY') {
       expect(play.profile.id).toBe('peanut')
@@ -109,10 +125,11 @@ describe('AnimationDispatcher', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.assignDrink('c2', 'peanut')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
     dispatcher.reset()
     dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
     dispatcher.onCoasterConfirmed('c2', { x: 10, y: 10 })
-    expect(collected).toHaveLength(0)
+    expect(collected[collected.length - 1]).toEqual({ action: 'END_CYCLE', coasterId: 'c1' })
   })
 
   it('only the unsubscribed callback stops receiving', () => {
@@ -121,17 +138,56 @@ describe('AnimationDispatcher', () => {
     const unsubA = dispatcher.subscribe((cmd) => a.push(cmd))
     dispatcher.subscribe((cmd) => b.push(cmd))
     unsubA()
-    dispatcher.onCoasterRemoved('c1')
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 1, y: 1 })
     expect(a).toHaveLength(0)
-    expect(b).toHaveLength(2)
+    expect(b).toHaveLength(4)
   })
 
   it('onCoasterDetected remains a compatibility alias of onCoasterConfirmed', () => {
     dispatcher.subscribe((cmd) => collected.push(cmd))
     dispatcher.assignDrink('c1', 'irish-coffee')
     dispatcher.onCoasterDetected('c1', { x: 10, y: 20 })
-    expect(collected).toHaveLength(2)
+    expect(collected).toHaveLength(4)
     expect(collected[0].action).toBe('PLAY')
     expect(collected[1].action).toBe('SPAWN_SPRITE')
+  })
+
+  it('confirmed coaster starts ring fade at 2s lost and sprite fade at 30s', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    vi.advanceTimersByTime(1_000) // pending window complete
+
+    dispatcher.onCoasterLost('c1')
+    vi.advanceTimersByTime(1_999)
+    expect(collected.filter((c) => c.action === 'TWEEN_RING_ALPHA')).toHaveLength(1)
+
+    vi.advanceTimersByTime(1)
+    expect(collected.filter((c) => c.action === 'TWEEN_RING_ALPHA')).toHaveLength(2)
+
+    vi.advanceTimersByTime(28_000)
+    expect(collected.filter((c) => c.action === 'TWEEN_SPRITE_ALPHA')).toHaveLength(2)
+
+    vi.advanceTimersByTime(1_000)
+    expect(collected[collected.length - 1]).toEqual({ action: 'END_CYCLE', coasterId: 'c1' })
+  })
+
+  it('recovery cancels pending lost timers and restores alpha', () => {
+    dispatcher.subscribe((cmd) => collected.push(cmd))
+    dispatcher.assignDrink('c1', 'irish-coffee')
+    dispatcher.onCoasterConfirmed('c1', { x: 0, y: 0 })
+    vi.advanceTimersByTime(1_000)
+    dispatcher.onCoasterLost('c1')
+
+    vi.advanceTimersByTime(1_000)
+    dispatcher.onCoasterVisible('c1', { x: 10, y: 10 })
+
+    expect(collected.some((c) => c.action === 'CANCEL_RING_TWEEN')).toBe(true)
+    expect(collected.some((c) => c.action === 'CANCEL_SPRITE_TWEEN')).toBe(true)
+
+    const before = collected.length
+    vi.advanceTimersByTime(35_000)
+    expect(collected).toHaveLength(before)
   })
 })

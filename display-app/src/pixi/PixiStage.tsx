@@ -3,7 +3,7 @@ import { Application, Assets, Graphics, Text, TextStyle } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
 import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
-import { drinkCatalog, getDrinkById } from '../data/drinkCatalog'
+import { drinkCatalog } from '../data/drinkCatalog'
 import { StandbyLayer } from './StandbyLayer'
 import { CoasterAnimation } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
@@ -11,12 +11,14 @@ import { GameLayer } from './GameLayer'
 import { ProximityBattle } from './ProximityBattle'
 import { AmbientPreviewLayer } from './AmbientPreviewLayer'
 import type { AnimationFamily } from '../types'
+import type { AnimationDispatcher, AnimationCommand } from '../engine/AnimationDispatcher'
 
 const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
 
 interface PixiStageProps {
   onTrackingSurfaceReady?: (element: HTMLDivElement | null) => void
   showAmbientPreview?: boolean
+  dispatcher?: AnimationDispatcher | null
 }
 
 function parseHexColor(hex: string, fallback = 0x66ccff): number {
@@ -72,6 +74,13 @@ function drawPreviewVibe(
   }
 }
 
+interface AlphaTween {
+  from: number
+  to: number
+  startedAt: number
+  durationMs: number
+}
+
 /**
  * PixiStage
  *
@@ -79,7 +88,7 @@ function drawPreviewVibe(
  * React StrictMode-safe via the `cancelled` flag pattern.
  * Wires Zustand coaster state to CoasterAnimation + IngredientSprite instances.
  */
-export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiStageProps = {}): JSX.Element {
+export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatcher }: PixiStageProps = {}): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const appRef = useRef<Application | null>(null)
   const standbyRef = useRef<StandbyLayer | null>(null)
@@ -106,6 +115,26 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
     colorHex: number
   } | null>(null)
   const ambientRef = useRef<AmbientPreviewLayer | null>(null)
+  const ringTweensRef = useRef(new Map<string, AlphaTween>())
+  const spriteTweensRef = useRef(new Map<string, AlphaTween>())
+
+  const destroyCoasterAnim = useCallback((coasterId: string): void => {
+    ringTweensRef.current.delete(coasterId)
+    const anim = animsRef.current.get(coasterId)
+    if (!anim) return
+    anim.unmount()
+    anim.destroy()
+    animsRef.current.delete(coasterId)
+  }, [])
+
+  const destroySprite = useCallback((coasterId: string): void => {
+    spriteTweensRef.current.delete(coasterId)
+    const sprite = spritesRef.current.get(coasterId)
+    if (!sprite) return
+    sprite.unmount()
+    sprite.destroy()
+    spritesRef.current.delete(coasterId)
+  }, [])
 
   useEffect(() => {
     onTrackingSurfaceReady?.(containerRef.current)
@@ -160,6 +189,25 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
 
       // Shared ticker drives all per-coaster animations
       app.ticker.add(() => {
+        const now = performance.now()
+        for (const [coasterId, tween] of ringTweensRef.current) {
+          const elapsed = now - tween.startedAt
+          const progress = tween.durationMs <= 0 ? 1 : Math.min(1, elapsed / tween.durationMs)
+          const alpha = tween.from + (tween.to - tween.from) * progress
+          animsRef.current.get(coasterId)?.setAlpha(alpha)
+          if (progress >= 1) {
+            ringTweensRef.current.delete(coasterId)
+          }
+        }
+        for (const [coasterId, tween] of spriteTweensRef.current) {
+          const elapsed = now - tween.startedAt
+          const progress = tween.durationMs <= 0 ? 1 : Math.min(1, elapsed / tween.durationMs)
+          const alpha = tween.from + (tween.to - tween.from) * progress
+          spritesRef.current.get(coasterId)?.setAlpha(alpha)
+          if (progress >= 1) {
+            spriteTweensRef.current.delete(coasterId)
+          }
+        }
         animsRef.current.forEach((a) => a.tick(app.ticker))
         spritesRef.current.forEach((s) => s.tick(app.ticker))
         previewsRef.current.forEach((preview) => {
@@ -219,6 +267,8 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
       animsRef.current.clear()
       spritesRef.current.forEach((s) => s.destroy())
       spritesRef.current.clear()
+      ringTweensRef.current.clear()
+      spriteTweensRef.current.clear()
       battlesRef.current.forEach((b) => b.destroy())
       battlesRef.current.clear()
       previewsRef.current.forEach((p) => {
@@ -293,6 +343,96 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
     }
   }, [gameState])
 
+  // ─── Animation dispatcher command stream ────────────────────────────────────
+  useEffect(() => {
+    if (!dispatcher) return
+    const unsubscribe = dispatcher.subscribe((cmd: AnimationCommand) => {
+      const app = appRef.current
+      if (!app) return
+
+      if (cmd.action === 'PLAY') {
+        const existing = animsRef.current.get(cmd.coasterId)
+        if (existing) {
+          existing.updatePosition(cmd.position)
+          existing.setAlpha(cmd.initialAlpha)
+          ringTweensRef.current.delete(cmd.coasterId)
+          return
+        }
+        const anim = new CoasterAnimation(cmd.profile, cmd.position)
+        anim.mount(app.stage)
+        anim.setAlpha(cmd.initialAlpha)
+        animsRef.current.set(cmd.coasterId, anim)
+        ringTweensRef.current.delete(cmd.coasterId)
+        return
+      }
+
+      if (cmd.action === 'SPAWN_SPRITE') {
+        const existing = spritesRef.current.get(cmd.coasterId)
+        if (existing) {
+          existing.setAlpha(cmd.initialAlpha)
+          spriteTweensRef.current.delete(cmd.coasterId)
+          return
+        }
+        const sprite = new IngredientSprite(cmd.character, cmd.position.x, cmd.position.y)
+        sprite.mount(app.stage)
+        sprite.setAlpha(cmd.initialAlpha)
+        spritesRef.current.set(cmd.coasterId, sprite)
+        spriteTweensRef.current.delete(cmd.coasterId)
+        return
+      }
+
+      if (cmd.action === 'UPDATE_POSITION') {
+        animsRef.current.get(cmd.coasterId)?.updatePosition(cmd.position)
+        return
+      }
+
+      if (cmd.action === 'TWEEN_RING_ALPHA') {
+        const anim = animsRef.current.get(cmd.coasterId)
+        if (!anim) return
+        const from = anim.container.alpha
+        ringTweensRef.current.set(cmd.coasterId, {
+          from,
+          to: cmd.toAlpha,
+          startedAt: performance.now(),
+          durationMs: cmd.durationMs,
+        })
+        return
+      }
+
+      if (cmd.action === 'TWEEN_SPRITE_ALPHA') {
+        const sprite = spritesRef.current.get(cmd.coasterId)
+        if (!sprite) return
+        const from = sprite.container.alpha
+        spriteTweensRef.current.set(cmd.coasterId, {
+          from,
+          to: cmd.toAlpha,
+          startedAt: performance.now(),
+          durationMs: cmd.durationMs,
+        })
+        return
+      }
+
+      if (cmd.action === 'CANCEL_RING_TWEEN') {
+        ringTweensRef.current.delete(cmd.coasterId)
+        animsRef.current.get(cmd.coasterId)?.setAlpha(cmd.alpha)
+        return
+      }
+
+      if (cmd.action === 'CANCEL_SPRITE_TWEEN') {
+        spriteTweensRef.current.delete(cmd.coasterId)
+        spritesRef.current.get(cmd.coasterId)?.setAlpha(cmd.alpha)
+        return
+      }
+
+      if (cmd.action === 'END_CYCLE') {
+        destroyCoasterAnim(cmd.coasterId)
+        destroySprite(cmd.coasterId)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [dispatcher, destroyCoasterAnim, destroySprite])
+
   // ─── Reactive coaster sync ───────────────────────────────────────────────────
   const sessionActive = useAppStore((s) => s.sessionActive)
   const coasters = useAppStore((s) => s.coasters)
@@ -307,6 +447,8 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
       animsRef.current.clear()
       spritesRef.current.forEach((s) => { s.unmount(); s.destroy() })
       spritesRef.current.clear()
+      ringTweensRef.current.clear()
+      spriteTweensRef.current.clear()
       battlesRef.current.forEach((b) => { b.unmount(); b.destroy() })
       battlesRef.current.clear()
       previewsRef.current.forEach((p) => {
@@ -379,49 +521,31 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview }: PixiSt
       previewsRef.current.set(id, { ring, vibe, label, phase: 0, x, y, color, family, title })
     }
 
+    const previewIds = new Set<string>()
     for (const c of coasters) {
-      if (c.detectionState === 'preview') {
-        const previewProfile = c.drinkId
-          ? drinkCatalog.find((drink) => drink.id === c.drinkId)
-          : undefined
-        const previewColor = parseHexColor(previewProfile?.colorPalette[0] ?? '#66ccff')
-        const previewFamily: AnimationFamily = previewProfile?.animationFamily ?? 'elegant'
-        const previewName = previewProfile?.name ?? 'UNASSIGNED'
-        upsertPreview(
-          c.id,
-          c.centroid.x,
-          c.centroid.y,
-          previewColor,
-          previewFamily,
-          `${coasterLabelFromId(c.id)}: ${previewName}`,
-        )
-        const anim = animsRef.current.get(c.id)
-        if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
-        const sprite = spritesRef.current.get(c.id)
-        if (sprite) { sprite.unmount(); sprite.destroy(); spritesRef.current.delete(c.id) }
-      } else if (c.detectionState === 'confirmed' && c.drinkId) {
+      if (c.detectionState !== 'preview') {
         clearPreview(c.id)
-        const profile = getDrinkById(c.drinkId)
-        if (!profile) continue
-
-        if (!animsRef.current.has(c.id)) {
-          const anim = new CoasterAnimation(profile, c.centroid)
-          anim.mount(app.stage)
-          animsRef.current.set(c.id, anim)
-
-          const sprite = new IngredientSprite(profile.spriteCharacter, c.centroid.x, c.centroid.y)
-          sprite.mount(app.stage)
-          spritesRef.current.set(c.id, sprite)
-        } else {
-          animsRef.current.get(c.id)!.updatePosition(c.centroid)
-        }
-      } else {
-        clearPreview(c.id)
-        const anim = animsRef.current.get(c.id)
-        if (anim) { anim.unmount(); anim.destroy(); animsRef.current.delete(c.id) }
-        const sprite = spritesRef.current.get(c.id)
-        if (sprite) { sprite.unmount(); sprite.destroy(); spritesRef.current.delete(c.id) }
+        continue
       }
+      const previewProfile = c.drinkId
+        ? drinkCatalog.find((drink) => drink.id === c.drinkId)
+        : undefined
+      const previewColor = parseHexColor(previewProfile?.colorPalette[0] ?? '#66ccff')
+      const previewFamily: AnimationFamily = previewProfile?.animationFamily ?? 'elegant'
+      const previewName = previewProfile?.name ?? 'UNASSIGNED'
+      upsertPreview(
+        c.id,
+        c.centroid.x,
+        c.centroid.y,
+        previewColor,
+        previewFamily,
+        `${coasterLabelFromId(c.id)}: ${previewName}`,
+      )
+      previewIds.add(c.id)
+    }
+
+    for (const previewId of previewsRef.current.keys()) {
+      if (!previewIds.has(previewId)) clearPreview(previewId)
     }
 
     // ── Proximity battle detection ────────────────────────────────────────────

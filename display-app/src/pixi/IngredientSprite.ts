@@ -1,11 +1,10 @@
 import { Container, Graphics, Text, TextStyle, type Ticker } from 'pixi.js'
 import { CANVAS_SIZE } from '../engine/CalibrationMapper'
+import { DROP_SPEED, WALK_SPEED } from './animationTiming'
 import { spriteRegistry } from './SpriteAnimDef'
 import { FrameAnimPlayer, type WalkEdge } from './FrameAnimPlayer'
 
 const EDGE_MARGIN = 16   // px from canvas edge when "landed"
-const DROP_SPEED  = 3    // px per frame while dropping
-const WALK_SPEED  = 1.5  // px per frame while walking
 const CORNER_TOL  = 18   // px tolerance for corner transitions
 
 /** Simple string hash → hue 0–360 */
@@ -116,6 +115,10 @@ export class IngredientSprite {
     if (this.container.parent) {
       this.container.parent.removeChild(this.container)
     }
+  }
+
+  setAlpha(alpha: number): void {
+    this.container.alpha = alpha
   }
 
   destroy(): void {

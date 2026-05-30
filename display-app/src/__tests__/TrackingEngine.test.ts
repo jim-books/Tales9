@@ -121,6 +121,7 @@ describe('TrackingEngine', () => {
     engine.processFrame(pts, t0 + 32)
     const lost = engine.processFrame([], t0 + 200)
     expect(lost.coasters[0].state).toBe('lost')
+    expect(lost.events.some((e) => e.type === 'lost')).toBe(true)
     const stillLost = engine.processFrame([], t0 + REMOVAL_DEBOUNCE_MS - 100)
     expect(stillLost.coasters[0].state).toBe('lost')
   })
@@ -196,6 +197,7 @@ describe('TrackingEngine', () => {
     const recoveredCoaster0 = recovered0.coasters.find((c) => c.templateId === 'coaster-5')
     expect(recoveredCoaster0?.id).toBe(instanceId)
     expect(recoveredCoaster0?.state).toBe('preview')
+    expect(recovered0.events.some((e) => e.type === 'recovered')).toBe(true)
 
     engine.processFrame(moved, t0 + 816)
     const recovered2 = engine.processFrame(moved, t0 + 832)

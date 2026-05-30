@@ -1,4 +1,5 @@
 import { AnimatedSprite, Assets, Container, Texture, type Ticker } from 'pixi.js'
+import { scaledAnimationSpeed } from './animationTiming'
 import { getFallWaitClip, type SpriteAnimDef } from './SpriteAnimDef'
 
 export type WalkEdge = 'top' | 'right' | 'bottom' | 'left'
@@ -126,7 +127,7 @@ export class FrameAnimPlayer {
       })
       this.fallWaitSprite = new AnimatedSprite(waitTextures)
       this.fallWaitSprite.autoUpdate = false
-      this.fallWaitSprite.animationSpeed = waitDef.animationSpeed
+      this.fallWaitSprite.animationSpeed = scaledAnimationSpeed(waitDef.animationSpeed)
       this.fallWaitSprite.anchor.set(0.5, 1.0)
       this.fallWaitSprite.scale.set(def.scale)
       this.fallWaitSprite.scale.x = Math.abs(this.fallWaitSprite.scale.x) * fScaleX
@@ -139,7 +140,7 @@ export class FrameAnimPlayer {
 
     this.fallSprite = new AnimatedSprite(fallTextures)
     this.fallSprite.autoUpdate = false
-    this.fallSprite.animationSpeed = def.fall.animationSpeed
+    this.fallSprite.animationSpeed = scaledAnimationSpeed(def.fall.animationSpeed)
     this.fallSprite.anchor.set(0.5, 1.0)
     this.fallSprite.scale.set(def.scale)
     // Orient fall/wait sprites toward the target edge so frames face the fall direction
@@ -152,7 +153,7 @@ export class FrameAnimPlayer {
 
     this.walkSprite = new AnimatedSprite(walkTextures)
     this.walkSprite.autoUpdate = false
-    this.walkSprite.animationSpeed = def.walk.animationSpeed
+    this.walkSprite.animationSpeed = scaledAnimationSpeed(def.walk.animationSpeed)
     this.walkSprite.anchor.set(0.5, 1.0)
     this.walkSprite.scale.set(def.scale)
     this.walkSprite.loop = true

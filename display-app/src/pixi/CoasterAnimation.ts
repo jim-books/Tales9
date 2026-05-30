@@ -1,5 +1,6 @@
 import { Container, Graphics, type Ticker } from 'pixi.js'
 import type { DrinkProfile } from '../types'
+import { COASTER_PHASE_RATE } from './animationTiming'
 
 const COASTER_ANIMATION_SCALE = 2.975
 
@@ -47,8 +48,12 @@ export class CoasterAnimation {
     this.cy = centroid.y
   }
 
+  setAlpha(alpha: number): void {
+    this.container.alpha = alpha
+  }
+
   tick(ticker: Ticker): void {
-    this.phase += ticker.deltaTime * 0.04
+    this.phase += ticker.deltaTime * COASTER_PHASE_RATE
     this.g.clear()
 
     const [c0, c1, c2] = this.profile.colorPalette.map(hexToNum) as [number, number, number]
