@@ -65,12 +65,12 @@ export class AnimStateMachine {
  *   top    → left (-x)  : rotation=π      body goes down  (-y→+y)   faces left  ✓
  *   left   → down (+y)  : rotation=+π/2   body goes right (-y→+x)   faces down  ✓
  */
-export function orientationForEdge(edge: WalkEdge): { scaleX: 1 | -1; rotation: number } {
+export function orientationForEdge(edge: WalkEdge, walkDir: 1 | -1 = 1): { scaleX: 1 | -1; rotation: number } {
   switch (edge) {
-    case 'bottom': return { scaleX: 1, rotation: 0 }
-    case 'right':  return { scaleX: 1, rotation: -Math.PI / 2 }
-    case 'top':    return { scaleX: 1, rotation: Math.PI }
-    case 'left':   return { scaleX: 1, rotation: Math.PI / 2 }
+    case 'bottom': return { scaleX: walkDir, rotation: 0 }
+    case 'right':  return { scaleX: walkDir, rotation: -Math.PI / 2 }
+    case 'top':    return { scaleX: walkDir, rotation: Math.PI }
+    case 'left':   return { scaleX: walkDir, rotation: Math.PI / 2 }
   }
 }
 
@@ -93,11 +93,12 @@ export class FrameAnimPlayer {
   private readonly container: Container
   private readonly stateMachine = new AnimStateMachine()
   private walkingMounted = false
+  private interacting = false
 
-  constructor(def: SpriteAnimDef, container: Container, initialEdge: WalkEdge = 'bottom') {
+  constructor(def: SpriteAnimDef, container: Container, initialEdge: WalkEdge = 'bottom', initialWalkDir: 1 | -1 = 1) {
     this.container = container
 
-    const { scaleX: fScaleX, rotation: fRotation } = orientationForEdge(initialEdge)
+    const { scaleX: fScaleX, rotation: fRotation } = orientationForEdge(initialEdge, initialWalkDir)
 
     const loopHandler = (): void => {
       this.stateMachine.onLoop()
@@ -184,16 +185,47 @@ export class FrameAnimPlayer {
    * Called by IngredientSprite each tick during the walk phase.
    * Applies the correct flip/rotation so the sprite faces its direction of travel.
    */
-  updateWalkOrientation(edge: WalkEdge): void {
+  updateWalkOrientation(edge: WalkEdge, walkDir: 1 | -1 = 1): void {
     if (!this.isWalking) return
-    const { scaleX, rotation } = orientationForEdge(edge)
+    const { scaleX, rotation } = orientationForEdge(edge, walkDir)
     this.walkSprite.scale.x = Math.abs(this.walkSprite.scale.x) * scaleX
     this.walkSprite.rotation = rotation
+    if (this.fallWaitSprite) {
+      this.fallWaitSprite.scale.x = Math.abs(this.fallWaitSprite.scale.x) * scaleX
+      this.fallWaitSprite.rotation = rotation
+    }
+  }
+
+  setInteracting(interacting: boolean): void {
+    this.interacting = interacting
+    if (interacting) {
+      this.walkSprite.stop()
+      if (this.walkSprite.parent) {
+        this.container.removeChild(this.walkSprite)
+      }
+      if (this.fallWaitSprite) {
+        this.container.addChild(this.fallWaitSprite)
+        this.fallWaitSprite.play()
+      }
+    } else {
+      this.fallWaitSprite?.stop()
+      if (this.fallWaitSprite?.parent) {
+        this.container.removeChild(this.fallWaitSprite)
+      }
+      this.container.addChild(this.walkSprite)
+      this.walkSprite.play()
+    }
   }
 
   /** Drives the active AnimatedSprite. Must be called every tick. */
   tick(ticker: Ticker): void {
-    if (this.isWalking) {
+    if (this.interacting) {
+      if (this.fallWaitSprite) {
+        this.fallWaitSprite.update(ticker)
+      } else {
+        this.walkSprite.update(ticker)
+      }
+    } else if (this.isWalking) {
       this.walkSprite.update(ticker)
     } else if (
       this.stateMachine.phase === 'FALL_WAIT' &&

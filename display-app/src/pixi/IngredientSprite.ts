@@ -41,13 +41,20 @@ function hueToColor(hue: number): number {
  */
 export class IngredientSprite {
   readonly container: Container
-  private state: 'dropping' | 'walking' = 'dropping'
+  private state: 'dropping' | 'walking' | 'interacting' = 'dropping'
   private x: number
   private y: number
   private edge: WalkEdge = 'bottom'
   private landX = 0
   private landY = 0
   private walkDir: 1 | -1 = 1
+  private walkSpeed: number
+  private nextDirSwitchTime = 0
+  private lastDirSwitchTime = 0
+  private interactionEndTime = 0
+  private nextInteractionAllowedTime = 0
+  private partnerId: string | null = null
+
   // Placeholder graphics — only used when no SpriteAnimDef is registered
   private body?: Graphics
   private label?: Text
@@ -76,13 +83,19 @@ export class IngredientSprite {
       this.edge = 'left'; this.landX = EDGE_MARGIN; this.landY = spawnY
     }
 
-    // Walk direction: always clockwise
-    this.walkDir = 1
+    // Walk direction: randomly 1 or -1
+    this.walkDir = Math.random() < 0.5 ? 1 : -1
+
+    // Speed: base WALK_SPEED varied by +/- 15% randomly per instance
+    this.walkSpeed = WALK_SPEED * (0.85 + Math.random() * 0.3)
+
+    this.lastDirSwitchTime = performance.now()
+    this.resetDirSwitchTimer()
 
     const def = spriteRegistry.get(character)
     if (def) {
       // Real frame-based animation
-      this.player = new FrameAnimPlayer(def, this.container, this.edge)
+      this.player = new FrameAnimPlayer(def, this.container, this.edge, this.walkDir)
     } else {
       // Procedural placeholder
       const hue = charToHue(character)
@@ -129,13 +142,138 @@ export class IngredientSprite {
   tick(_ticker: Ticker): void {
     if (this.state === 'dropping') {
       this.stepDrop()
-    } else {
+    } else if (this.state === 'walking') {
+      // Check for direction switch
+      const now = performance.now()
+      if (now >= this.nextDirSwitchTime) {
+        this.flipDirection()
+      }
       this.stepWalk()
-      this.player?.updateWalkOrientation(this.edge)
+      this.player?.updateWalkOrientation(this.edge, this.walkDir)
+    } else if (this.state === 'interacting') {
+      const now = performance.now()
+      if (now >= this.interactionEndTime) {
+        this.endInteraction()
+      }
     }
     this.player?.tick(_ticker)
     this.container.x = this.x
     this.container.y = this.y
+  }
+
+  resetDirSwitchTimer(): void {
+    const minInterval = 5000 // 5 seconds
+    const maxInterval = 12000 // 12 seconds
+    this.nextDirSwitchTime = performance.now() + minInterval + Math.random() * (maxInterval - minInterval)
+  }
+
+  flipDirection(): void {
+    this.walkDir = this.walkDir === 1 ? -1 : 1
+    this.lastDirSwitchTime = performance.now()
+    this.resetDirSwitchTimer()
+  }
+
+  getState(): 'dropping' | 'walking' | 'interacting' {
+    return this.state
+  }
+
+  get xCoord(): number {
+    return this.x
+  }
+
+  get yCoord(): number {
+    return this.y
+  }
+
+  getEdge(): WalkEdge {
+    return this.edge
+  }
+
+  getWalkDir(): 1 | -1 {
+    return this.walkDir
+  }
+
+  setWalkDir(dir: 1 | -1): void {
+    this.walkDir = dir
+    this.resetDirSwitchTimer()
+  }
+
+  startInteraction(partnerId: string, durationMs: number): void {
+    this.state = 'interacting'
+    this.partnerId = partnerId
+    this.interactionEndTime = performance.now() + durationMs
+    this.player?.setInteracting(true)
+  }
+
+  getPartnerId(): string | null {
+    return this.partnerId
+  }
+
+  getInteractionEndTime(): number {
+    return this.interactionEndTime
+  }
+
+  endInteraction(partnerX?: number, partnerY?: number): void {
+    this.state = 'walking'
+    this.partnerId = null
+    this.interactionEndTime = 0
+    this.nextInteractionAllowedTime = performance.now() + 10000 // 10 seconds cooldown
+    this.player?.setInteracting(false)
+    
+    if (partnerX !== undefined && partnerY !== undefined) {
+      // Determine which direction moves us AWAY from the partner's position
+      let testX1 = this.x
+      let testY1 = this.y
+      let testX2 = this.x
+      let testY2 = this.y
+      
+      const step = 10
+      
+      if (this.edge === 'bottom') {
+        testX1 += step; testX2 -= step
+      } else if (this.edge === 'right') {
+        testY1 -= step; testY2 += step
+      } else if (this.edge === 'top') {
+        testX1 -= step; testX2 += step
+      } else if (this.edge === 'left') {
+        testY1 += step; testY2 -= step
+      }
+      
+      const distSq1 = (testX1 - partnerX) ** 2 + (testY1 - partnerY) ** 2
+      const distSq2 = (testX2 - partnerX) ** 2 + (testY2 - partnerY) ** 2
+      
+      // Set direction to whichever moves us further from the partner
+      this.walkDir = distSq1 > distSq2 ? 1 : -1
+    } else {
+      this.resetDirSwitchTimer()
+    }
+    this.lastDirSwitchTime = performance.now()
+  }
+
+  canInteract(): boolean {
+    return this.state === 'walking' && performance.now() >= this.nextInteractionAllowedTime
+  }
+
+  steerToward(targetX: number, targetY: number): void {
+    let mvX = 0
+    let mvY = 0
+    if (this.edge === 'bottom') mvX = this.walkSpeed * this.walkDir
+    else if (this.edge === 'right') mvY = -this.walkSpeed * this.walkDir
+    else if (this.edge === 'top') mvX = -this.walkSpeed * this.walkDir
+    else if (this.edge === 'left') mvY = this.walkSpeed * this.walkDir
+
+    const toTargetX = targetX - this.x
+    const toTargetY = targetY - this.y
+    const dot = mvX * toTargetX + mvY * toTargetY
+
+    if (dot < 0) {
+      const now = performance.now()
+      if (now - this.lastDirSwitchTime > 2500) {
+        if (Math.random() < 0.005) {
+          this.flipDirection()
+        }
+      }
+    }
   }
 
   private stepDrop(): void {
@@ -156,7 +294,7 @@ export class IngredientSprite {
   private stepWalk(): void {
     switch (this.edge) {
       case 'bottom':
-        this.x += WALK_SPEED * this.walkDir
+        this.x += this.walkSpeed * this.walkDir
         if (this.x >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
           this.x = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'right'; this.y = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         } else if (this.x <= EDGE_MARGIN + CORNER_TOL) {
@@ -164,7 +302,7 @@ export class IngredientSprite {
         }
         break
       case 'right':
-        this.y -= WALK_SPEED * this.walkDir
+        this.y -= this.walkSpeed * this.walkDir
         if (this.y <= EDGE_MARGIN + CORNER_TOL) {
           this.y = EDGE_MARGIN; this.edge = 'top'; this.x = CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL - 1
         } else if (this.y >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
@@ -172,7 +310,7 @@ export class IngredientSprite {
         }
         break
       case 'top':
-        this.x -= WALK_SPEED * this.walkDir
+        this.x -= this.walkSpeed * this.walkDir
         if (this.x <= EDGE_MARGIN + CORNER_TOL) {
           this.x = EDGE_MARGIN; this.edge = 'left'; this.y = EDGE_MARGIN + CORNER_TOL + 1
         } else if (this.x >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
@@ -180,7 +318,7 @@ export class IngredientSprite {
         }
         break
       case 'left':
-        this.y += WALK_SPEED * this.walkDir
+        this.y += this.walkSpeed * this.walkDir
         if (this.y >= CANVAS_SIZE - EDGE_MARGIN - CORNER_TOL) {
           this.y = CANVAS_SIZE - EDGE_MARGIN; this.edge = 'bottom'; this.x = EDGE_MARGIN + CORNER_TOL + 1
         } else if (this.y <= EDGE_MARGIN + CORNER_TOL) {

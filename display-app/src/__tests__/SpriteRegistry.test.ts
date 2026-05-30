@@ -212,4 +212,22 @@ describe('orientationForEdge', () => {
     expect(o.scaleX).toBe(1)
     expect(o.rotation).toBeCloseTo(Math.PI / 2)
   })
+
+  it('counter-clockwise walking (walkDir = -1) flips scaleX for all edges', () => {
+    const ob = orientationForEdge('bottom', -1)
+    expect(ob.scaleX).toBe(-1)
+    expect(ob.rotation).toBe(0)
+
+    const ot = orientationForEdge('top', -1)
+    expect(ot.scaleX).toBe(-1)
+    expect(ot.rotation).toBeCloseTo(Math.PI)
+
+    const or = orientationForEdge('right', -1)
+    expect(or.scaleX).toBe(-1)
+    expect(or.rotation).toBeCloseTo(-Math.PI / 2)
+
+    const ol = orientationForEdge('left', -1)
+    expect(ol.scaleX).toBe(-1)
+    expect(ol.rotation).toBeCloseTo(Math.PI / 2)
+  })
 })

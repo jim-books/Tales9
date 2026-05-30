@@ -163,6 +163,86 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
           }
         }
         animsRef.current.forEach((a) => a.tick(app.ticker))
+
+        // Update interactions and attraction
+        const walkingSprites: { id: string; s: IngredientSprite }[] = []
+        const interactingSprites: { id: string; s: IngredientSprite }[] = []
+
+        spritesRef.current.forEach((s, id) => {
+          const state = s.getState()
+          if (state === 'walking') {
+            walkingSprites.push({ id, s })
+          } else if (state === 'interacting') {
+            interactingSprites.push({ id, s })
+          }
+        })
+
+        // Check if any interacting sprite has lost its partner or finished its interaction time
+        interactingSprites.forEach(({ s }) => {
+          if (s.getState() !== 'interacting') return
+
+          const partnerId = s.getPartnerId()
+          const partner = partnerId ? spritesRef.current.get(partnerId) : null
+          
+          if (performance.now() >= s.getInteractionEndTime()) {
+            if (partner) {
+              s.endInteraction(partner.xCoord, partner.yCoord)
+              partner.endInteraction(s.xCoord, s.yCoord)
+            } else {
+              s.endInteraction()
+            }
+          } else if (partnerId && !partner) {
+            s.endInteraction()
+          }
+        })
+
+        // Apply attraction tendency and detect meetings between walking sprites
+        for (let i = 0; i < walkingSprites.length; i++) {
+          const spriteA = walkingSprites[i].s
+          const idA = walkingSprites[i].id
+
+          if (spriteA.getState() !== 'walking') continue
+
+          let closestSprite: IngredientSprite | null = null
+          let closestDist = Infinity
+
+          for (let j = 0; j < walkingSprites.length; j++) {
+            if (i === j) continue
+            const spriteB = walkingSprites[j].s
+            if (spriteB.getState() !== 'walking') continue
+
+            const dx = spriteB.xCoord - spriteA.xCoord
+            const dy = spriteB.yCoord - spriteA.yCoord
+            const dist = Math.sqrt(dx * dx + dy * dy)
+
+            if (dist < closestDist) {
+              closestDist = dist
+              closestSprite = spriteB
+            }
+          }
+
+          if (closestSprite && closestDist < Infinity) {
+            if (closestDist <= 56) {
+              const partnerEntry = walkingSprites.find(w => w.s === closestSprite)
+              if (partnerEntry && spriteA.canInteract() && closestSprite.canInteract()) {
+                const idB = partnerEntry.id
+                
+                spriteA.startInteraction(idB, 5000)
+                closestSprite.startInteraction(idA, 5000)
+
+                const currentDirA = spriteA.getWalkDir()
+                spriteA.setWalkDir(currentDirA)
+                closestSprite.setWalkDir(currentDirA === 1 ? -1 : 1)
+              }
+              continue
+            }
+
+            if (closestDist <= 600 && spriteA.canInteract() && closestSprite.canInteract()) {
+              spriteA.steerToward(closestSprite.xCoord, closestSprite.yCoord)
+            }
+          }
+        }
+
         spritesRef.current.forEach((s) => s.tick(app.ticker))
         previewsRef.current.forEach((preview) => {
           preview.phase += app.ticker.deltaTime * 0.06
