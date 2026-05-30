@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
 import type { DrinkCategory, UserColor, UserEdge } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
@@ -61,6 +61,24 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
   )
 }
 
+interface ScrollDragState {
+  activeId: number
+  startX: number
+  startY: number
+  startTop: number
+  dragging: boolean
+  inputType: 'pointer' | 'touch' | 'none'
+}
+
+const INITIAL_DRAG_STATE: ScrollDragState = {
+  activeId: -1,
+  startX: 0,
+  startY: 0,
+  startTop: 0,
+  dragging: false,
+  inputType: 'none',
+}
+
 export function MenuScreen({
   userColor: _userColor,
   panelEdge,
@@ -72,57 +90,128 @@ export function MenuScreen({
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL')
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const panelEdgeRef = useRef(panelEdge)
   const suppressNavigateUntilRef = useRef(0)
-  const dragStateRef = useRef({
-    pointerId: -1,
-    startX: 0,
-    startY: 0,
-    startTop: 0,
-    dragging: false,
-  })
+  const dragStateRef = useRef<ScrollDragState>({ ...INITIAL_DRAG_STATE })
+
+  panelEdgeRef.current = panelEdge
+
+  const applyScrollDrag = useCallback((clientX: number, clientY: number) => {
+    const scrollEl = scrollRef.current
+    const drag = dragStateRef.current
+    if (!scrollEl || drag.inputType === 'none') return
+
+    const deltaX = clientX - drag.startX
+    const deltaY = clientY - drag.startY
+    const localDragY = panelLocalDragY(panelEdgeRef.current, deltaX, deltaY)
+
+    if (!drag.dragging && Math.abs(localDragY) > 8) {
+      drag.dragging = true
+      suppressNavigateUntilRef.current = Date.now() + 450
+    }
+    if (!drag.dragging) return
+
+    const scrollDelta = menuScrollDelta(panelEdgeRef.current, deltaX, deltaY)
+    scrollEl.scrollTop = drag.startTop + scrollDelta
+  }, [])
+
+  const beginScrollDrag = useCallback(
+    (inputType: 'pointer' | 'touch', activeId: number, clientX: number, clientY: number) => {
+      if (!scrollRef.current) return
+      dragStateRef.current = {
+        activeId,
+        startX: clientX,
+        startY: clientY,
+        startTop: scrollRef.current.scrollTop,
+        dragging: false,
+        inputType,
+      }
+    },
+    [],
+  )
+
+  const endScrollDrag = useCallback((inputType: 'pointer' | 'touch', activeId: number) => {
+    const drag = dragStateRef.current
+    if (drag.inputType !== inputType || drag.activeId !== activeId) return
+    if (drag.dragging) {
+      suppressNavigateUntilRef.current = Date.now() + 450
+    }
+    dragStateRef.current = { ...INITIAL_DRAG_STATE }
+  }, [])
 
   const handleCardPress = useCallback(
     (drinkId: string) => {
       const now = Date.now()
+      if (dragStateRef.current.dragging) return
       if (now < suppressNavigateUntilRef.current || now < menuEntrySuppressUntil) return
       onNavigate({ view: 'detail', drinkId })
     },
     [menuEntrySuppressUntil, onNavigate],
   )
 
-  const handleScrollPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' || !scrollRef.current) return
-    dragStateRef.current.pointerId = e.pointerId
-    dragStateRef.current.startX = e.clientX
-    dragStateRef.current.startY = e.clientY
-    dragStateRef.current.startTop = scrollRef.current.scrollTop
-    dragStateRef.current.dragging = false
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }, [])
+  const handleScrollPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType !== 'mouse' || !scrollRef.current) return
+      beginScrollDrag('pointer', e.pointerId, e.clientX, e.clientY)
+    },
+    [beginScrollDrag],
+  )
 
-  const handleScrollPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrollRef.current || dragStateRef.current.pointerId !== e.pointerId) return
-    const deltaX = e.clientX - dragStateRef.current.startX
-    const deltaY = e.clientY - dragStateRef.current.startY
-    const localDragY = panelLocalDragY(panelEdge, deltaX, deltaY)
-    if (!dragStateRef.current.dragging && Math.abs(localDragY) > 8) {
-      dragStateRef.current.dragging = true
-      suppressNavigateUntilRef.current = Date.now() + 450
-    }
-    if (!dragStateRef.current.dragging) return
-    const scrollDelta = menuScrollDelta(panelEdge, deltaX, deltaY)
-    scrollRef.current.scrollTop = dragStateRef.current.startTop + scrollDelta
-    e.preventDefault()
-  }, [panelEdge])
+  const handleScrollPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragStateRef.current
+      if (drag.inputType !== 'pointer' || drag.activeId !== e.pointerId) return
+      applyScrollDrag(e.clientX, e.clientY)
+      if (drag.dragging) e.preventDefault()
+    },
+    [applyScrollDrag],
+  )
 
-  const clearDragState = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragStateRef.current.pointerId !== e.pointerId) return
-    if (dragStateRef.current.dragging) {
-      suppressNavigateUntilRef.current = Date.now() + 450
+  const handleScrollPointerEnd = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      endScrollDrag('pointer', e.pointerId)
+    },
+    [endScrollDrag],
+  )
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 0) return
+      const touch = e.changedTouches[0]
+      if (!touch) return
+      beginScrollDrag('touch', touch.identifier, touch.clientX, touch.clientY)
     }
-    dragStateRef.current.pointerId = -1
-    dragStateRef.current.dragging = false
-  }, [])
+
+    const onTouchMove = (e: TouchEvent) => {
+      const drag = dragStateRef.current
+      if (drag.inputType !== 'touch') return
+      const touch = Array.from(e.touches).find((t) => t.identifier === drag.activeId)
+      if (!touch) return
+      applyScrollDrag(touch.clientX, touch.clientY)
+      if (dragStateRef.current.dragging) e.preventDefault()
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      for (const touch of Array.from(e.changedTouches)) {
+        endScrollDrag('touch', touch.identifier)
+      }
+    }
+
+    scrollEl.addEventListener('touchstart', onTouchStart, { passive: true })
+    scrollEl.addEventListener('touchmove', onTouchMove, { passive: false })
+    scrollEl.addEventListener('touchend', onTouchEnd, { passive: true })
+    scrollEl.addEventListener('touchcancel', onTouchEnd, { passive: true })
+
+    return () => {
+      scrollEl.removeEventListener('touchstart', onTouchStart)
+      scrollEl.removeEventListener('touchmove', onTouchMove)
+      scrollEl.removeEventListener('touchend', onTouchEnd)
+      scrollEl.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [applyScrollDrag, beginScrollDrag, endScrollDrag])
 
   const filtered = drinkCatalog.filter((drink) => {
     const matchesCategory = activeCategory === 'ALL' || drink.category === activeCategory
@@ -181,8 +270,8 @@ export function MenuScreen({
         className="menu-screen__scroll"
         onPointerDown={handleScrollPointerDown}
         onPointerMove={handleScrollPointerMove}
-        onPointerUp={clearDragState}
-        onPointerCancel={clearDragState}
+        onPointerUp={handleScrollPointerEnd}
+        onPointerCancel={handleScrollPointerEnd}
       >
         {filtered.length === 0 ? (
           <div className="menu-empty">No cocktails found.</div>

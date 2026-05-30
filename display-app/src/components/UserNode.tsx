@@ -165,7 +165,7 @@ export function isTapGesture(
   return Math.hypot(end.x - start.x, end.y - start.y) < slopPx
 }
 
-export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Element {
+export function UserNode({ node, canvasSize, orders: _orders }: UserNodeProps): JSX.Element {
   const {
     togglePanel,
     setUserNodePosition,
@@ -194,8 +194,6 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
 
   const left = node.position.x * canvasSize
   const top = node.position.y * canvasSize
-
-  const userOrders = orders.filter((o) => o.userId === node.id)
 
   const handleOrder = useCallback(
     (drinkId: string) => {
@@ -433,7 +431,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         return (
           <OrderStatusPanel
             userColor={node.color}
-            orders={userOrders}
+            userId={node.id}
             onNavigate={navigate}
           />
         )
@@ -457,7 +455,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
       <div
         style={{
           position: 'relative',
-          zIndex: 2,
+          zIndex: node.panelOpen ? 1 : 2,
           width: NODE_HITBOX_SIZE,
           height: NODE_HITBOX_SIZE,
           display: 'flex',
@@ -509,7 +507,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
             position: 'absolute',
             ...panelAnchorStyle,
             ...panelWrapperSize,
-            zIndex: 1,
+            zIndex: node.panelOpen ? 3 : 1,
             pointerEvents: 'auto',
             display: 'flex',
             alignItems: 'center',

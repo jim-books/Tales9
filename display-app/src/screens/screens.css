@@ -1150,7 +1150,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: none;
   overscroll-behavior: contain;
   padding: 10px 14px 14px;
   scrollbar-width: none;

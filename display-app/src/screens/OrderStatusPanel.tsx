@@ -1,12 +1,14 @@
+import { useMemo } from 'react'
 import { getDrinkById } from '../data/drinkCatalog'
-import type { Order, OrderStatus, UserColor } from '../types'
+import { useAppStore } from '../store/useAppStore'
+import type { OrderStatus, UserColor } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
 import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface OrderStatusPanelProps {
   userColor: UserColor
-  orders: Order[]
+  userId: string
   onNavigate: (screen: PanelScreen) => void
 }
 
@@ -26,8 +28,13 @@ const STATUS_DOT: Record<OrderStatus, DotClass> = {
   arrived:    'order-status-dot--arrived',
 }
 
-export function OrderStatusPanel({ userColor: _userColor, orders, onNavigate }: OrderStatusPanelProps): JSX.Element {
+export function OrderStatusPanel({ userColor: _userColor, userId, onNavigate }: OrderStatusPanelProps): JSX.Element {
   const { makePressHandlers } = usePressAction()
+  const allOrders = useAppStore((s) => s.orders)
+  const orders = useMemo(
+    () => allOrders.filter((o) => o.userId === userId),
+    [allOrders, userId],
+  )
 
   return (
     <div className="screen">
