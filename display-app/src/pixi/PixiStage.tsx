@@ -5,12 +5,12 @@ import { getAllSpriteUrls } from './SpriteAnimDef'
 import { useAppStore } from '../store/useAppStore'
 import { drinkCatalog } from '../data/drinkCatalog'
 import { StandbyLayer } from './StandbyLayer'
-import { CoasterAnimation } from './CoasterAnimation'
+import { CoasterAnimation, drawOrbitalPreset, hexToNum, DEFAULT_PRESET } from './CoasterAnimation'
 import { IngredientSprite } from './IngredientSprite'
 import { GameLayer } from './GameLayer'
 import { ProximityBattle } from './ProximityBattle'
 import { AmbientPreviewLayer } from './AmbientPreviewLayer'
-import type { AnimationFamily } from '../types'
+import type { OrbitalPreset } from '../types'
 import type { AnimationDispatcher, AnimationCommand } from '../engine/AnimationDispatcher'
 
 const PROXIMITY_THRESHOLD = 280  // px — coasters within this distance trigger a battle
@@ -21,58 +21,12 @@ interface PixiStageProps {
   dispatcher?: AnimationDispatcher | null
 }
 
-function parseHexColor(hex: string, fallback = 0x66ccff): number {
-  const normalized = hex.trim().replace('#', '')
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return fallback
-  return Number.parseInt(normalized, 16)
-}
 
 function coasterLabelFromId(id: string): string {
   const match = id.match(/(\d+)/)
   return match ? `Coaster ${match[1]}` : id.toUpperCase()
 }
 
-function drawPreviewVibe(
-  graphics: Graphics,
-  family: AnimationFamily,
-  x: number,
-  y: number,
-  phase: number,
-  color: number,
-): void {
-  switch (family) {
-    case 'energetic': {
-      for (let i = 0; i < 3; i++) {
-        const angle = phase * 2.8 + (Math.PI * 2 * i) / 3
-        const ox = Math.cos(angle) * 16
-        const oy = Math.sin(angle) * 16
-        graphics.circle(x + ox, y + oy, 4).fill({ color, alpha: 0.68 })
-      }
-      break
-    }
-    case 'elegant': {
-      const ring = 10 + ((Math.sin(phase * 0.8) + 1) * 0.5) * 16
-      graphics.circle(x, y, ring).stroke({ color, width: 1.5, alpha: 0.56 })
-      break
-    }
-    case 'tropical': {
-      const p = (Math.sin(phase) + 1) * 0.5
-      graphics.circle(x, y, 12 + p * 8).stroke({ color, width: 2, alpha: 0.48 })
-      graphics.circle(x, y, 22 + (1 - p) * 8).stroke({ color, width: 1.5, alpha: 0.38 })
-      break
-    }
-    case 'bold': {
-      const pulse = 10 + ((Math.sin(phase * 1.4) + 1) * 0.5) * 10
-      for (let i = 0; i < 4; i++) {
-        const angle = (Math.PI * i) / 2
-        const x2 = x + Math.cos(angle) * pulse
-        const y2 = y + Math.sin(angle) * pulse
-        graphics.moveTo(x, y).lineTo(x2, y2).stroke({ color, width: 2, alpha: 0.62 })
-      }
-      break
-    }
-  }
-}
 
 interface AlphaTween {
   from: number
@@ -103,8 +57,8 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
     phase: number
     x: number
     y: number
-    color: number
-    family: AnimationFamily
+    colorPalette: [number, number, number]
+    preset: OrbitalPreset
     title: string
   }>())
   const burstRef = useRef<{
@@ -217,19 +171,23 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
           preview.ring.clear()
           preview.ring
             .circle(preview.x, preview.y, r)
-            .stroke({ color: preview.color, width: 2, alpha })
+            .stroke({ color: preview.colorPalette[0], width: 2, alpha })
           preview.ring
             .circle(preview.x, preview.y, r * 0.6)
-            .stroke({ color: preview.color, width: 1, alpha: alpha * 0.7 })
+            .stroke({ color: preview.colorPalette[0], width: 1, alpha: alpha * 0.7 })
+          
           preview.vibe.clear()
-          drawPreviewVibe(
+          preview.vibe.alpha = 0.7
+          drawOrbitalPreset(
             preview.vibe,
-            preview.family,
             preview.x,
             preview.y,
+            preview.preset,
             preview.phase,
-            preview.color,
+            preview.colorPalette,
+            (size) => size * 0.8
           )
+          
           preview.label.text = preview.title
           preview.label.alpha = 0.85
           preview.label.x = preview.x
@@ -481,21 +439,22 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       id: string,
       x: number,
       y: number,
-      color: number,
-      family: AnimationFamily,
+      colorPalette: [number, number, number],
+      preset: OrbitalPreset,
       title: string,
     ): void => {
       const preview = previewsRef.current.get(id)
+      const primaryColor = colorPalette[0]
       if (preview) {
         preview.x = x
         preview.y = y
-        preview.color = color
-        preview.family = family
+        preview.colorPalette = colorPalette
+        preview.preset = preset
         preview.title = title
         preview.label.style = new TextStyle({
           fontSize: 13,
           fontWeight: '700',
-          fill: color,
+          fill: primaryColor,
           align: 'center',
           letterSpacing: 0.5,
         })
@@ -508,7 +467,7 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
         style: new TextStyle({
           fontSize: 13,
           fontWeight: '700',
-          fill: color,
+          fill: primaryColor,
           align: 'center',
           letterSpacing: 0.5,
         }),
@@ -518,7 +477,7 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       app.stage.addChild(ring)
       app.stage.addChild(vibe)
       app.stage.addChild(label)
-      previewsRef.current.set(id, { ring, vibe, label, phase: 0, x, y, color, family, title })
+      previewsRef.current.set(id, { ring, vibe, label, phase: 0, x, y, colorPalette, preset, title })
     }
 
     const previewIds = new Set<string>()
@@ -530,15 +489,16 @@ export function PixiStage({ onTrackingSurfaceReady, showAmbientPreview, dispatch
       const previewProfile = c.drinkId
         ? drinkCatalog.find((drink) => drink.id === c.drinkId)
         : undefined
-      const previewColor = parseHexColor(previewProfile?.colorPalette[0] ?? '#66ccff')
-      const previewFamily: AnimationFamily = previewProfile?.animationFamily ?? 'elegant'
+      const colorsStr = previewProfile?.colorPalette ?? ['#66ccff', '#3399ff', '#99ccff']
+      const colorPalette = colorsStr.map(hexToNum) as [number, number, number]
+      const preset = previewProfile?.orbitalPreset ?? DEFAULT_PRESET
       const previewName = previewProfile?.name ?? 'UNASSIGNED'
       upsertPreview(
         c.id,
         c.centroid.x,
         c.centroid.y,
-        previewColor,
-        previewFamily,
+        colorPalette,
+        preset,
         `${coasterLabelFromId(c.id)}: ${previewName}`,
       )
       previewIds.add(c.id)

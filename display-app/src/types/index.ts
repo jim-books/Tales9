@@ -8,6 +8,63 @@ export type UserColor = 'blue' | 'green' | 'orange' | 'purple'
 export type UserEdge = 'top' | 'right' | 'bottom' | 'left'
 export type CoasterDetectionState = 'preview' | 'confirmed' | 'lost'
 
+export interface OrbitLine {
+  radius: number
+  width: number
+  dashCount?: number
+  dashRatio?: number
+  speed: number
+  alpha: number
+  colorIndex: number
+  breathe?: {
+    speed: number
+    amp: number
+  }
+}
+
+export interface OrbitParticle {
+  radius: number
+  count: number
+  size: number
+  speed: number
+  alpha: number
+  colorIndex: number
+}
+
+export interface WaveRing {
+  radius: number
+  width: number
+  amplitude: number
+  wavelength: number
+  speed: number
+  alpha: number
+  colorIndex: number
+  glow?: boolean
+  fillAlpha?: number
+  breathe?: {
+    speed: number
+    amp: number
+  }
+}
+
+export interface RadialSpoke {
+  innerRadius: number
+  outerRadius: number
+  count: number
+  width: number
+  speed: number
+  alpha: number
+  colorIndex: number
+  crosshair?: boolean
+}
+
+export interface OrbitalPreset {
+  lines: OrbitLine[]
+  particles: OrbitParticle[]
+  waves: WaveRing[]
+  spokes: RadialSpoke[]
+}
+
 export interface DrinkProfile {
   id: string
   name: string
@@ -20,6 +77,7 @@ export interface DrinkProfile {
   spriteCharacter: string
   description: string
   imageUrl?: string
+  orbitalPreset?: OrbitalPreset
 }
 
 /** Raw 2D point — used for touch input and display coords */
