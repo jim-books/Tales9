@@ -389,6 +389,7 @@ export function UserNode({ node, canvasSize, orders }: UserNodeProps): JSX.Eleme
         return (
           <MenuScreen
             userColor={node.color}
+            panelEdge={displayEdge}
             onNavigate={navigate}
             onOrder={handleOrder}
           />

@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { drinkCatalog } from '../data/drinkCatalog'
-import type { DrinkCategory, UserColor } from '../types'
+import type { DrinkCategory, UserColor, UserEdge } from '../types'
 import type { PanelScreen } from '../components/PanelScreen'
+import { menuScrollDelta, panelLocalDragY } from './menuScroll'
 import { usePressAction } from './usePressAction'
 import './screens.css'
 
 interface MenuScreenProps {
   userColor: UserColor
+  panelEdge: UserEdge
   onNavigate: (screen: PanelScreen) => void
   onOrder: (drinkId: string) => void
 }
@@ -58,17 +60,66 @@ function MenuDrinkMedia({ drinkId, drinkName, fallbackGradient }: MenuDrinkMedia
   )
 }
 
-export function MenuScreen({ userColor: _userColor, onNavigate, onOrder: _onOrder }: MenuScreenProps): JSX.Element {
+export function MenuScreen({
+  userColor: _userColor,
+  panelEdge,
+  onNavigate,
+  onOrder: _onOrder,
+}: MenuScreenProps): JSX.Element {
   const { makePressHandlers } = usePressAction()
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL')
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const suppressNavigateUntilRef = useRef(0)
+  const dragStateRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    startTop: 0,
+    dragging: false,
+  })
 
   const handleCardPress = useCallback(
     (drinkId: string) => {
+      if (Date.now() < suppressNavigateUntilRef.current) return
       onNavigate({ view: 'detail', drinkId })
     },
     [onNavigate],
   )
+
+  const handleScrollPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' || !scrollRef.current) return
+    dragStateRef.current.pointerId = e.pointerId
+    dragStateRef.current.startX = e.clientX
+    dragStateRef.current.startY = e.clientY
+    dragStateRef.current.startTop = scrollRef.current.scrollTop
+    dragStateRef.current.dragging = false
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }, [])
+
+  const handleScrollPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrollRef.current || dragStateRef.current.pointerId !== e.pointerId) return
+    const deltaX = e.clientX - dragStateRef.current.startX
+    const deltaY = e.clientY - dragStateRef.current.startY
+    const localDragY = panelLocalDragY(panelEdge, deltaX, deltaY)
+    if (!dragStateRef.current.dragging && Math.abs(localDragY) > 8) {
+      dragStateRef.current.dragging = true
+      suppressNavigateUntilRef.current = Date.now() + 350
+    }
+    if (!dragStateRef.current.dragging) return
+    const scrollDelta = menuScrollDelta(panelEdge, deltaX, deltaY)
+    scrollRef.current.scrollTop = dragStateRef.current.startTop + scrollDelta
+    e.preventDefault()
+  }, [panelEdge])
+
+  const clearDragState = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStateRef.current.pointerId !== e.pointerId) return
+    if (dragStateRef.current.dragging) {
+      suppressNavigateUntilRef.current = Date.now() + 250
+    }
+    dragStateRef.current.pointerId = -1
+    dragStateRef.current.dragging = false
+  }, [])
 
   const filtered = drinkCatalog.filter((drink) => {
     const matchesCategory = activeCategory === 'ALL' || drink.category === activeCategory
@@ -122,7 +173,14 @@ export function MenuScreen({ userColor: _userColor, onNavigate, onOrder: _onOrde
         </div>
       </div>
 
-      <div className="menu-screen__scroll">
+      <div
+        ref={scrollRef}
+        className="menu-screen__scroll"
+        onPointerDown={handleScrollPointerDown}
+        onPointerMove={handleScrollPointerMove}
+        onPointerUp={clearDragState}
+        onPointerCancel={clearDragState}
+      >
         {filtered.length === 0 ? (
           <div className="menu-empty">No cocktails found.</div>
         ) : (
